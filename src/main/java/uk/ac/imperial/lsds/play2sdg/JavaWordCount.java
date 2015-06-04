@@ -17,7 +17,7 @@ import scala.Tuple2;
 public class JavaWordCount {
 	
 	private static final Pattern SPACE = Pattern.compile(" ");
-	public static String inputFile = "/home/pg1712/workspace/play2sdg-spark-module/data/";
+	public static String inputFile = "data/";
 
 	public static void main(String[] args) {
 		
