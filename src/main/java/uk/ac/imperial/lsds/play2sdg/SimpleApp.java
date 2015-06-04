@@ -10,14 +10,14 @@ import org.apache.spark.api.java.function.Function;
 public class SimpleApp {
   public static void main(String[] args) {
     String logFile = "README.md"; // Should be some file on your system
-    
+    //String logFile = "hdfs://wombat30.doc.res.ic.ac.uk:8020//user/pg1712/README.md";
     
     SparkConf conf = new SparkConf()
     		.setAppName("Eclipse Application")
     		.set("spark.executor.uri", "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-1.1.0-bin-2.0.0-cdh4.7.0.tgz")
     		.set("spark.executor.memory","1g")
     		.setMaster("local");
-    		//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
+    		//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050");
     		//.setJars(new String[]{"/home/pg1712/play2sdg-Spark-module-0.0.1-SNAPSHOT-jar-with-dependencies.jar"});
     
     /*
@@ -34,13 +34,13 @@ public class SimpleApp {
     JavaRDD<String> logData = sc.textFile(logFile).cache();
 
     long numAs = logData.filter(new Function<String, Boolean>() {
-      public Boolean call(String s) { return s.contains("a"); }
+      public Boolean call(String s) { return s.contains("="); }
     }).count();
 
     long numBs = logData.filter(new Function<String, Boolean>() {
-      public Boolean call(String s) { return s.contains("b"); }
+      public Boolean call(String s) { return s.contains("d"); }
     }).count();
 
-    System.out.println("Lines with a: " + numAs + ", lines with b: " + numBs);
+    System.out.println("Lines with '=' : " + numAs + ", lines with 'd' : " + numBs);
   }
 }
