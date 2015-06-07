@@ -12,6 +12,36 @@
       <version>1.1.0</version>
     </dependency>
     
+    <dependency>
+		<groupId>org.apache.spark</groupId>
+		<artifactId>spark-streaming_2.10</artifactId>
+		<version>1.1.0</version>
+	</dependency>
+
+	<dependency>
+		<groupId>com.sun.jersey</groupId>
+		<artifactId>jersey-client</artifactId>
+		<version>1.8</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.json</groupId>
+		<artifactId>json</artifactId>
+		<version>20141113</version>
+	</dependency>
+	
+	<dependency>
+    	<groupId>com.googlecode.json-simple</groupId>
+    	<artifactId>json-simple</artifactId>
+    	<version>1.1.1</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>jfreechart</groupId>
+		<artifactId>jfreechart</artifactId>
+		<version>1.0.0</version>
+	</dependency>
+	
     <!-- <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_2.10</artifactId>
@@ -25,6 +55,12 @@
         <artifactId>spark-cassandra-connector-java_2.10</artifactId>
         <version>1.1.0</version>
     </dependency>
+    
+    <dependency>
+            <groupId>com.impetus.client</groupId>
+            <artifactId>kundera-cassandra</artifactId>
+            <version>2.9</version>
+    </dependency>
 	
 	<!-- Cassandra Core 
     <dependency>
@@ -32,7 +68,7 @@
             <artifactId>cassandra-driver-core</artifactId>
             <version>2.0</version>
     </dependency> -->
-	
+    
 	<dependency>
     	<groupId>org.slf4j</groupId>
     	<artifactId>slf4j-api</artifactId>
@@ -43,7 +79,7 @@
   </dependencies>
   
   <build>
-    <sourceDirectory>src</sourceDirectory>
+    <sourceDirectory>src/</sourceDirectory>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>

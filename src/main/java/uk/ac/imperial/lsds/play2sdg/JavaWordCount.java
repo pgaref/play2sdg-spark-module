@@ -17,18 +17,27 @@ import scala.Tuple2;
 public class JavaWordCount {
 	
 	private static final Pattern SPACE = Pattern.compile(" ");
-	public static String inputFile = "data/";
-
+	//public static String inputFile = "data/songs/train_triplets.txt";
+	public static String inputFile = "hdfs://wombat30.doc.res.ic.ac.uk:8020//user/pg1712/train_triplets.txt";
+	
 	public static void main(String[] args) {
 		
 		SparkConf conf = new SparkConf()
-					.set("spark.executor.memory","1g")
+					/*.set("spark.executor.memory","1g")
 					.setAppName("Spark Java WordCount")
-					.setMaster("local");
+					.setMaster("local");*/
+					.setAppName("Distributed WordCount")
+					.set("spark.executor.uri", "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-1.1.0-bin-2.0.0-cdh4.7.0.tgz")
+					.set("spark.executor.memory","4g")
+					//.set("spark.storage.memoryFraction", "0.7")
+					.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050");
 		
 		JavaSparkContext ctx = new JavaSparkContext(conf);
 		//For one file
-	    JavaRDD<String> lines = ctx.textFile(inputFile, 1);
+		/*
+		 * If you get Kryo Decompression Exceptions try increasing the partitions number
+		 */
+	    JavaRDD<String> lines = ctx.textFile(inputFile, 100);
 
 	    JavaRDD<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
 	      @Override
