@@ -4,6 +4,13 @@
   <artifactId>play2sdg-Spark-module</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   
+  <repositories>
+  	<repository>
+    	<id>cloudera-repo-releases</id>
+    	<url>https://repository.cloudera.com/artifactory/repo/</url>
+  	</repository>
+  </repositories>
+  
   <dependencies>
     
     <dependency> <!-- Spark dependency -->
@@ -42,11 +49,11 @@
 		<version>1.0.0</version>
 	</dependency>
 	
-    <!-- <dependency>
+    <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_2.10</artifactId>
             <version>1.1.0</version>
-    </dependency> -->
+    </dependency>
      
      <!-- Spark Cassandra Connector -->
      <!-- Be Carrefull with Version Compatibility -->
@@ -55,6 +62,12 @@
         <artifactId>spark-cassandra-connector-java_2.10</artifactId>
         <version>1.1.0</version>
     </dependency>
+    
+    <dependency>
+    	<groupId>org.apache.hadoop</groupId>
+    	<artifactId>hadoop-client</artifactId>
+    	<version>2.0.0-cdh4.0.0</version>
+	</dependency>
     
     <dependency>
             <groupId>com.impetus.client</groupId>

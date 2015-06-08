@@ -1,8 +1,11 @@
 package main.java.uk.ac.imperial.lsds.utils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -12,11 +15,15 @@ import java.util.Map;
 
 import main.java.uk.ac.imperial.lsds.models.Track;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockMissingException;
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.BR;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /* 	LINK: http://labrosa.ee.columbia.edu/millionsong/lastfm#getting
  *  943,347 matched tracks MSD <-> Last.fm
@@ -26,24 +33,202 @@ import org.json.simple.parser.JSONParser;
  *	8,598,630 (track - tag) pairs
  *	56,506,688 (track - similar track) pairs
  */
-public class LastFMDataSet {
+public class LastFMDataParser {
 
-	private String path;
-	private File file = null;
-	private String[] subdirs;
-	private List<File> allFiles;
+	private static String path;
+	private static File file = null;
+	private static String[] subdirs;
+	private static List<File> allFiles;
+	private static boolean isHDFS;
+	private static List<Track> spotifytracks = new ArrayList<Track>();
+	HDFSFileBrowser browser = null;
 	
 	private static Logger  logger = Logger.getLogger("main.java.uk.ac.imperial.lsds.utils.LastFMDataSet");
 	
 
-	public LastFMDataSet(String path) {
-		this.path = path;
-		file = new File(path);
-		this.subdirs = this.getSubDirectories();
-		this.allFiles = listAllFiles(path);
+	public LastFMDataParser(String path) {
+		
+		LastFMDataParser.path = path;
+		if(path.startsWith("hdfs"))
+			LastFMDataParser.isHDFS= true;
+		else
+			LastFMDataParser.isHDFS= false;
+		
+		if(isHDFS){
+	        	browser = new HDFSFileBrowser("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		}
+		else{
+			LastFMDataParser.file = new File(path);
+			LastFMDataParser.subdirs = this.getSubDirectories();
+			LastFMDataParser.allFiles = listAllFiles(path);
+		}
+
+	}
+
+
+	public String[] getSubDirectories() {
+
+		return file.list(new FilenameFilter() {
+			@Override
+			public boolean accept(File current, String name) {
+				return new File(current, name).isDirectory();
+			}
+		});
+	}
+	
+	public static List<File> listAllFiles(String directoryName) {
+        File directory = new File(directoryName);
+        List<File> resultList = new ArrayList<File>();
+        // get all the files from a directory
+        File[] fList = directory.listFiles();
+        //resultList.addAll(Arrays.asList(fList));
+        for (File file : fList) {
+            if (file.isFile()) {
+                logger.debug("Adding File: "+ file.getAbsolutePath());
+                //Avoid hidden and system files!
+                if(file.getName().endsWith(".json"))
+                	resultList.add(file);
+            } else if (file.isDirectory()) {
+            	logger.debug("Ignoring dir: " + file);
+                resultList.addAll(listAllFiles(file.getAbsolutePath()));
+            }
+        }      
+        return resultList;
+    }
+	
+	public static void checkTrackJsonFields(JSONObject trackjson){
+		/*
+		 * Check all the mandatory fields we need are not null!
+		 */
+		assert( trackjson.get("track_id") != null);
+		assert( trackjson.get("artist") != null);
+		assert( trackjson.get("title") != null);
+		assert( trackjson.get("timestamp") != null);
 		
 	}
 	
+	public static Track dumpTrack(JSONObject trackjson, boolean perist){
+		logger.debug("Creating Track "+ trackjson.get("track_id"));
+		Track t  = new Track((String)trackjson.get("track_id"), (String)trackjson.get("title"), (String)trackjson.get("artist"), (String)trackjson.get("timestamp"));
+		logger.debug("Sucessfuly created "+ trackjson.get("track_id"));
+		if(perist){
+			CassandraController.persist(t);
+			logger.debug("Sucessfuly persisted "+ trackjson.get("track_id") + " to Cassandra");
+		}
+		return t;
+	}
+	
+
+		  
+	public static List<Track> JsonReadTracksFromFile(File f, boolean persist){
+        
+		JSONParser parser = new JSONParser();
+    	
+		ContainerFactory containerFactory = new ContainerFactory() {
+    		public List creatArrayContainer() {
+    			return new LinkedList();
+    		}
+    		public Map createObjectContainer() {
+    			return new LinkedHashMap();
+    		}
+    	};
+    	/*
+    	 * Convert json files to Tracks!
+    	 */
+        try {
+ 
+			Object obj = parser.parse(new FileReader(f));
+			JSONObject jsonObject = (JSONObject) obj;
+			LastFMDataParser.checkTrackJsonFields(jsonObject);
+
+			Map json = (Map) parser.parse(jsonObject.toJSONString(), containerFactory);
+			//Iterator iter = json.entrySet().iterator();
+			System.out.println("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
+			//Add track to List and Optionally save track to Cassandra Back-end!
+			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
+			System.out.println(" ---> TacksList size: "+spotifytracks.size() );
+			
+//			while (iter.hasNext()) {
+//				Map.Entry entry = (Map.Entry) iter.next();
+//				System.out.println(entry.getKey() + "=>" + entry.getValue());
+//			}
+                                     
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return spotifytracks;
+	}
+	
+	public static List<Track> JsonReadTracksFromHDFS(Path p, boolean persist){
+        
+		JSONParser parser = new JSONParser();
+    	
+		ContainerFactory containerFactory = new ContainerFactory() {
+    		public List creatArrayContainer() {
+    			return new LinkedList();
+    		}
+    		public Map createObjectContainer() {
+    			return new LinkedHashMap();
+    		}
+    	};
+    	/*
+    	 * Convert json files from HDFS to Tracks!
+    	 */
+    	BufferedReader br = null;
+        try {
+ 
+        	br = new BufferedReader(new InputStreamReader(HDFSFileBrowser.getFileSystem().open(p)));
+			Object obj = parser.parse(br);
+			
+			JSONObject jsonObject = (JSONObject) obj;
+			LastFMDataParser.checkTrackJsonFields(jsonObject);
+
+			Map json = (Map) parser.parse(jsonObject.toJSONString(), containerFactory);
+			
+			//Iterator iter = json.entrySet().iterator();
+			System.out.println("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
+			//Add track to List and Optionally save track to Cassandra Back-end!
+			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
+			logger.info(" ---> TacksList size: "+spotifytracks.size() );
+            br.close();                         
+        } catch (BlockMissingException e) {
+            logger.error("HDFS Block Missing exception: " + e);
+        } catch (ParseException e) {
+        	 logger.error("JSON parse exception: " + e);
+		} catch (IOException e) {
+			logger.error("JSON IOexception: " + e);
+		} finally{
+			if(br != null){
+				try {
+					br.close();
+				} catch (IOException e) {
+					logger.error("Closing BufferedReader IOexception: " + e);
+				}
+			}
+		}
+		return spotifytracks;
+        
+	}
+
+	public static List<Track> parseDataSet(boolean writeToCassandra){
+		List<Track> tracksList = null ;
+		if(!isHDFS){
+			for(File f : allFiles){
+				logger.debug("## fs File: " + f);
+				tracksList =  JsonReadTracksFromFile(f, writeToCassandra);
+			}
+		}
+		else{
+			for(Path p : HDFSFileBrowser.getPaths()){
+				logger.debug("## hdfs File: " + p.getName());
+				tracksList = JsonReadTracksFromHDFS(p, writeToCassandra );
+			}
+			
+		}
+		return tracksList;
+		
+	}
 
 	/**
 	 * @return the path
@@ -72,118 +257,20 @@ public class LastFMDataSet {
 	public void setSubdirs(String[] subdirs) {
 		this.subdirs = subdirs;
 	}
-
-	public String[] getSubDirectories() {
-
-		return file.list(new FilenameFilter() {
-			@Override
-			public boolean accept(File current, String name) {
-				return new File(current, name).isDirectory();
-			}
-		});
-	}
-	
-	public static List<File> listAllFiles(String directoryName) {
-        File directory = new File(directoryName);
-        List<File> resultList = new ArrayList<File>();
-        // get all the files from a directory
-        File[] fList = directory.listFiles();
-        //resultList.addAll(Arrays.asList(fList));
-        for (File file : fList) {
-            if (file.isFile()) {
-                logger.debug("Adding File: "+ file.getAbsolutePath());
-                //Avoid hidden and system files!
-                if(file.getName().contains(".json"))
-                	resultList.add(file);
-            } else if (file.isDirectory()) {
-            	logger.debug("Ignoring dir: " + file);
-                resultList.addAll(listAllFiles(file.getAbsolutePath()));
-            }
-        }      
-        return resultList;
-    }
-	
-	public static void checkTrackJsonFields(JSONObject trackjson){
-		/*
-		 * Check all the mandatory fields we need are not null!
-		 */
-		assert( trackjson.get("track_id") != null);
-		assert( trackjson.get("artist") != null);
-		assert( trackjson.get("title") != null);
-		assert( trackjson.get("timestamp") != null);
-		
-	}
-	
-	public static void dumpTrack(JSONObject trackjson){
-		logger.debug("Creating Track "+ trackjson.get("track_id"));
-		Track t  = new Track((String)trackjson.get("track_id"), (String)trackjson.get("title"), (String)trackjson.get("artist"), (String)trackjson.get("timestamp"));
-		logger.debug("Sucessfuly created "+ trackjson.get("track_id"));
-		CassandraController.persist(t);
-		logger.debug("Sucessfuly persisted "+ trackjson.get("track_id") + " to Cassandra");
-	}
-	
-
-		  
-	public static List<Track> JsonReadTracksFromFile(File f, boolean persist){
-        
-		JSONParser parser = new JSONParser();
-    	
-		ContainerFactory containerFactory = new ContainerFactory() {
-    		public List creatArrayContainer() {
-    			return new LinkedList();
-    		}
-
-    		public Map createObjectContainer() {
-    			return new LinkedHashMap();
-    		}
-
-    	};
-    	/*
-    	 * Convert json files to Tracks!
-    	 */
-    	List<Track> spotifytracks = new ArrayList<Track>();
-    	
-        try {
- 
-			Object obj = parser.parse(new FileReader(f));
-
-			JSONObject jsonObject = (JSONObject) obj;
-			LastFMDataSet.checkTrackJsonFields(jsonObject);
-			
-
-			Map json = (Map) parser.parse(jsonObject.toJSONString(), containerFactory);
-			Iterator iter = json.entrySet().iterator();
-			System.out.println("==Creating new Track: " +jsonObject.get("track_id") +  "==");
-			if(persist)
-				LastFMDataSet.dumpTrack(jsonObject);
-			
-//			while (iter.hasNext()) {
-//				Map.Entry entry = (Map.Entry) iter.next();
-//				System.out.println(entry.getKey() + "=>" + entry.getValue());
-//			}
-                                    
-			
- 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        return spotifytracks;
-	}
-
 	
 	public static void main(String[] args) {
 		logger.setLevel(Level.DEBUG);
-		LastFMDataSet dataset = new LastFMDataSet("data/LastFM/lastfm_subset");
+		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		//LastFMDataParser dataset = new LastFMDataParser("data/LastFM/lastfm_subset", true);
 		//LastFMDataSet dataset = new LastFMDataSet("data/LastFM/lastfm_train");
 		
-		for(File f : dataset.allFiles){
-			System.out.println("## File: " + f);
-			JsonReadTracksFromFile(f, true);
-		}
+		List<Track> tracksList = parser.parseDataSet(false);
+		logger.info("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
 		
-		System.out.println("Tracks Num ## "+ dataset.allFiles.size());
-		logger.info("Sucessfully dumped #"+ dataset.allFiles.size() + "# Tracks" );
+		for(Track t : tracksList ){
+			System.out.println ( " Track index: "+ tracksList.indexOf(t) );
+			break;
+		}
 	}
-
 }
