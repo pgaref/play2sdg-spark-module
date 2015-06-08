@@ -28,7 +28,7 @@ public class JavaWordCount {
 					.setMaster("local");*/
 					.setAppName("Distributed WordCount")
 					.set("spark.executor.uri", "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-1.1.0-bin-2.0.0-cdh4.7.0.tgz")
-					.set("spark.executor.memory","4g")
+				//	.set("spark.executor.memory","4g")
 					//.set("spark.storage.memoryFraction", "0.7")
 					.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050");
 		
