@@ -68,7 +68,7 @@ public class HDFSFileBrowser {
     	
     	for (int i = 0; i < status.length; i++) {
             FileStatus fileStatus = status[i];
-            System.out.println(fileStatus.getPath());
+            //System.out.println(fileStatus.getPath());
             if (fileStatus.isDir()) {
                 FileStatus[] subStatus = fileSystem.listStatus(fileStatus.getPath());
                 browse(subStatus);

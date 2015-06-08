@@ -17,9 +17,10 @@ import main.java.uk.ac.imperial.lsds.models.Track;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.BR;
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
@@ -43,8 +44,7 @@ public class LastFMDataParser {
 	private static List<Track> spotifytracks = new ArrayList<Track>();
 	HDFSFileBrowser browser = null;
 	
-	private static Logger  logger = Logger.getLogger("main.java.uk.ac.imperial.lsds.utils.LastFMDataSet");
-	
+	private static Logger  logger = Logger.getLogger(LastFMDataParser.class);
 
 	public LastFMDataParser(String path) {
 		
@@ -120,7 +120,7 @@ public class LastFMDataParser {
 	
 
 		  
-	public static List<Track> JsonReadTracksFromFile(File f, boolean persist){
+	public static void JsonReadTracksFromFile(File f, boolean persist){
         
 		JSONParser parser = new JSONParser();
     	
@@ -143,10 +143,10 @@ public class LastFMDataParser {
 
 			Map json = (Map) parser.parse(jsonObject.toJSONString(), containerFactory);
 			//Iterator iter = json.entrySet().iterator();
-			System.out.println("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
+			logger.debug("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
 			//Add track to List and Optionally save track to Cassandra Back-end!
 			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
-			System.out.println(" ---> TacksList size: "+spotifytracks.size() );
+			logger.debug(" ---> TacksList size: "+spotifytracks.size() );
 			
 //			while (iter.hasNext()) {
 //				Map.Entry entry = (Map.Entry) iter.next();
@@ -157,10 +157,9 @@ public class LastFMDataParser {
             e.printStackTrace();
         }
         
-        return spotifytracks;
 	}
 	
-	public static List<Track> JsonReadTracksFromHDFS(Path p, boolean persist){
+	public static void JsonReadTracksFromHDFS(Path p, boolean persist){
         
 		JSONParser parser = new JSONParser();
     	
@@ -187,7 +186,7 @@ public class LastFMDataParser {
 			Map json = (Map) parser.parse(jsonObject.toJSONString(), containerFactory);
 			
 			//Iterator iter = json.entrySet().iterator();
-			System.out.println("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
+			logger.info("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
 			//Add track to List and Optionally save track to Cassandra Back-end!
 			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
 			logger.info(" ---> TacksList size: "+spotifytracks.size() );
@@ -207,26 +206,25 @@ public class LastFMDataParser {
 				}
 			}
 		}
-		return spotifytracks;
-        
 	}
 
 	public static List<Track> parseDataSet(boolean writeToCassandra){
-		List<Track> tracksList = null ;
+
 		if(!isHDFS){
 			for(File f : allFiles){
 				logger.debug("## fs File: " + f);
-				tracksList =  JsonReadTracksFromFile(f, writeToCassandra);
+				JsonReadTracksFromFile(f, writeToCassandra);
 			}
 		}
 		else{
 			for(Path p : HDFSFileBrowser.getPaths()){
 				logger.debug("## hdfs File: " + p.getName());
-				tracksList = JsonReadTracksFromHDFS(p, writeToCassandra );
+				JsonReadTracksFromHDFS(p, writeToCassandra );
 			}
 			
 		}
-		return tracksList;
+		logger.info(" ---> TacksList TOTAL size: "+spotifytracks.size() );
+		return spotifytracks;
 		
 	}
 
@@ -257,16 +255,30 @@ public class LastFMDataParser {
 	public void setSubdirs(String[] subdirs) {
 		this.subdirs = subdirs;
 	}
+
+	/*
+	 * #######################################
+	 */
+	static
+	{
+	    Logger rootLogger = Logger.getRootLogger();
+	    rootLogger.setLevel(Level.INFO);
+	    rootLogger.addAppender(new ConsoleAppender(
+	               new PatternLayout("%-6r [%p] %c - %m%n")));
+	}
+
 	
 	public static void main(String[] args) {
-		logger.setLevel(Level.DEBUG);
+		
+		logger.setLevel(Level.ERROR);
 		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		
 		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
 		//LastFMDataParser dataset = new LastFMDataParser("data/LastFM/lastfm_subset", true);
 		//LastFMDataSet dataset = new LastFMDataSet("data/LastFM/lastfm_train");
 		
 		List<Track> tracksList = parser.parseDataSet(false);
-		logger.info("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
+		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
 		
 		for(Track t : tracksList ){
 			System.out.println ( " Track index: "+ tracksList.indexOf(t) );

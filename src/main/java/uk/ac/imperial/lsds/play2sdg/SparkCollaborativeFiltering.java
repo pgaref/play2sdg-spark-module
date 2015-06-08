@@ -1,8 +1,11 @@
 package main.java.uk.ac.imperial.lsds.play2sdg;
 
+import java.util.List;
 import java.util.logging.Logger;
 
 import scala.Tuple2;
+import main.java.uk.ac.imperial.lsds.models.Track;
+import main.java.uk.ac.imperial.lsds.utils.LastFMDataParser;
 
 import org.apache.spark.api.java.*;
 import org.apache.spark.api.java.function.Function;
@@ -20,9 +23,18 @@ public class SparkCollaborativeFiltering {
 				.setMaster("local")
 				.setAppName("Collaborative Filtering Example");
 		JavaSparkContext sc = new JavaSparkContext(conf);
-
+		
+		/*
+		 * First Fetch the Track List 
+		 */
+		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		List<Track> tracksList = parser.parseDataSet(false);
+		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
+		
 		// Load and parse the data
-		String path = "data/mllib/als/test.data";
+		//String path = "data/mllib/als/test.data";
+		String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/test.data";
+				
 		JavaRDD<String> data = sc.textFile(path);
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
 			public Rating call(String s) {
