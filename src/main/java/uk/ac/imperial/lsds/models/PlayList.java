@@ -1,34 +1,57 @@
 package main.java.uk.ac.imperial.lsds.models;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
-public class PlayList implements Serializable{
+import com.impetus.kundera.index.Index;
+import com.impetus.kundera.index.IndexCollection;
+
+
+//@Security.Authenticated(Secured.class)
+@Entity
+@Table(name = "playlists", schema = "play_cassandra@cassandra_pu")
+//Secondary index
+@IndexCollection(columns = { @Index(name = "usermail") })
+public class PlayList{
 	
-    public UUID id;
-    public String folder;
-    public String usermail;
-    public List<String> titles = new ArrayList<String>();
-    
-    public PlayList(){
-    	
-    }
-    
-    
-    public PlayList(String usermail, String fname) {
-    	
-    	this.id = UUID.randomUUID();
-    	this.folder = fname;
-    	this.usermail= usermail;
-    	
-    }
-    
-    public void addRatingSong(Track s){
-    	this.titles.add(s.getTitle());
-    }
+  @Id
+  public UUID id;
+  
+  @Column(name = "folder")
+  public String folder;
+  
+  @Column(name = "usermail")
+  public String usermail;
+  
+  @ElementCollection
+  @Column(name = "tracks")
+  public List<String> tracks;
+  
+  public PlayList(){}
+  
+  
+  public PlayList(String usermail, String fname) {
+  	
+  	this.id = UUID.randomUUID();
+  	this.folder = fname;
+  	this.usermail= usermail;
+  	this.tracks = new ArrayList<String>();
+  	
+  }
+  
+  public void addRatingSong(Track s){
+  	if(tracks == null)
+  		tracks = new ArrayList<String>();
+  	
+  	tracks.add(s.getTitle());
+  }
 
 	/**
 	 * @return the id
@@ -73,41 +96,25 @@ public class PlayList implements Serializable{
 	}
 
 	/**
-	 * @return the songs
+	 * @return the tracks
 	 */
-	public List<String> getSongs() {
-		return titles;
-	}
-
-	/**
-	 * @param songs the songs to set
-	 */
-	public void setSongs(List<String> songs) {
-		this.titles = songs;
-	}
-	
-	/**
-	 * @return the titles
-	 */
-	public List<String> getTitles() {
-		return titles;
+	public List<String> getTracks() {
+		return tracks;
 	}
 
 
 	/**
-	 * @param titles the titles to set
+	 * @param tracks the tracks to set
 	 */
-	public void setTitles(List<String> titles) {
-		this.titles = titles;
+	public void setTracks(List<String> tracks) {
+		this.tracks = tracks;
 	}
-
 	
 	public String toString(){
+		
 		return "\n--------------------------------------------------"
 				+ "\n Playlist: "+this.folder
 				+"\n usermail: "+ this.usermail 
-				+"\n Songs: "+ this.titles.toString();
+				+"\n Songs: "+ ( tracks != null? this.tracks.toString() : " empty");
 	}
-
-
 }

@@ -14,29 +14,26 @@ import com.impetus.kundera.index.Index;
 import com.impetus.kundera.index.IndexCollection;
 
 
-
 @Entity
 @Table(name = "tracks", schema = "play_cassandra@cassandra_pu")
 //Secondary index
 @IndexCollection(columns = { @Index(name = "title") })
-
 public class Track implements Serializable{
 
 
 	private static final long serialVersionUID = 1L;
 	
 	@Id
-	@Column(name = "track_id")
-	private String track_id;
+	public String track_id;
 	
 	@Column(name = "title")
-	private String title;
+	public String title;
 	
 	@Column(name = "artist")
-    private String artist;
+	public String artist;
 	
 	@Column(name = "releaseDate")
-    public 	Date releaseDate;
+	public 	Date releaseDate;
     
     public Track(){
     	
