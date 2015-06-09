@@ -2,5 +2,6 @@
 raul@example.com raul secret Raul Fernardex
 prp@example.com prp secret Peter Pietzuch
 pangaref@example.com pangaref secret Panagiotis Garefalakis
+pgaref@example.com pangaref secret Panos Garefalakis
 user1@example.com user1 secret user1Fname user1Lname
 user2@example.com user2 secret user2Fname user2Lname 

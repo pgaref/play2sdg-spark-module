@@ -95,8 +95,11 @@ public class FileParser {
 		FileParser fileParser = new FileParser("data/users.txt");
 		List<User> usersFromFile = fileParser.ParseUsers(); 
 		
-		for(User u : usersFromFile)
+		for(User u : usersFromFile){
 			System.out.println("\n Read user: "+ u);
+			CassandraController.persist(u);
+			System.out.println("Persisted ...");
+		}
 	}
 
 }

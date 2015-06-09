@@ -3,13 +3,31 @@ package main.java.uk.ac.imperial.lsds.models;
 import java.io.Serializable;
 import java.util.List;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
+@Entity
+@Table(name = "users", schema = "play_cassandra@cassandra_pu")
+//create column family users with comparator=UTF8Type and default_validation_class=UTF8Type and key_validation_class=UTF8Type;
 public class User implements Serializable{
 	
+	private static final long serialVersionUID = 2L;
+	
+	@Id
 	private String email;
+
+	@Column(name = "username")
 	public String username;
+
+	@Column(name = "password")
 	private String password;
+
+	@Column(name = "firstname")
 	public String firstname;
+
+	@Column(name = "lastname")
 	public String lastname;	
 	
 	//default constructor
@@ -100,25 +118,12 @@ public class User implements Serializable{
 		this.lastname = lastname;
 	}
 	
-
-	/**
-	 * @return the firstname
-	 */
-	public String getFirstname() {
-		return firstname;
-	}
-
-	/**
-	 * @param firstname the firstname to set
-	 */
-	public void setFirstname(String firstname) {
-		this.firstname = firstname;
-	}
-	
 	public String toString() {
 		return "\n--------------------------------------------------"
 				+ "\nuserEmail: " + this.getEmail() + "\nusername: "+ this.getUsername()
 				+ "\nfirstName:" + this.getFistname() + "\nlastName: " + this.getLastname()
 				+ "\npass: " + this.password;
 	}
+	
+	
 }
