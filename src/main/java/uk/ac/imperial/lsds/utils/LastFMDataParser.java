@@ -13,7 +13,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import main.java.uk.ac.imperial.lsds.models.PlayList;
+import main.java.uk.ac.imperial.lsds.models.Recommendations;
 import main.java.uk.ac.imperial.lsds.models.Track;
+import main.java.uk.ac.imperial.lsds.models.User;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
@@ -55,7 +58,7 @@ public class LastFMDataParser {
 			LastFMDataParser.isHDFS= false;
 		
 		if(isHDFS){
-	        	browser = new HDFSFileBrowser("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+	        	browser = new HDFSFileBrowser(path);
 		}
 		else{
 			LastFMDataParser.file = new File(path);
@@ -271,18 +274,28 @@ public class LastFMDataParser {
 	public static void main(String[] args) {
 		
 		logger.setLevel(Level.ERROR);
-		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		
-		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
 		//LastFMDataParser dataset = new LastFMDataParser("data/LastFM/lastfm_subset", true);
 		//LastFMDataSet dataset = new LastFMDataSet("data/LastFM/lastfm_train");
 		
-		List<Track> tracksList = parser.parseDataSet(false);
+		List<Track> tracksList = parser.parseDataSet(true);
 		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
 		
 		for(Track t : tracksList ){
-			System.out.println ( " Track index: "+ tracksList.indexOf(t) );
+			System.out.println ( " Track index: "+ tracksList.indexOf(t)  + " with Title "+ t.getTitle() );
 			break;
 		}
+		
+		User u = CassandraController.findbyEmail("pgaref@example.com");
+		PlayList plist = new PlayList("pgaref@example.com", "LoungeMusic");
+		plist.addRatingSong(tracksList.get(0));
+		CassandraController.persist(plist);
+		
+		Recommendations rtest = new Recommendations("pgaref@example.com");
+		rtest.addRecSong(tracksList.get(1).getTitle());
+		CassandraController.persist(rtest);
+		
 	}
 }

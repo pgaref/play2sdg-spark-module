@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import scala.Tuple2;
+import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Track;
+import main.java.uk.ac.imperial.lsds.models.User;
+import main.java.uk.ac.imperial.lsds.utils.CassandraController;
 import main.java.uk.ac.imperial.lsds.utils.LastFMDataParser;
 
 import org.apache.spark.api.java.*;
@@ -21,15 +24,43 @@ public class SparkCollaborativeFiltering {
 	public static void main(String[] args) {
 		SparkConf conf = new SparkConf().set("spark.executor.memory", "3g")
 				.setMaster("local")
-				.setAppName("Collaborative Filtering Example");
+				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
+				.setAppName("play2sdg Collaborative Filtering Job");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		
 		/*
 		 * First Fetch the Track List 
-		 */
+		 
 		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		List<Track> tracksList = parser.parseDataSet(false);
 		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
+		*/
+		
+		/*
+		 * Fetch PlayLists From Cassandra  - aka Ratings
+		 */
+		
+		List<PlayList> allplaylists = CassandraController.listAllPlaylists();
+		List<User> allusers = CassandraController.listAllUsers();
+		
+		System.out.println("## Total Users Fetched # "+ allusers.size() +" ##");
+		
+		for(User u : allusers)
+			System.out.println("U: "+ u);
+		
+		System.out.println("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
+		
+		for(PlayList p : allplaylists)
+			System.out.println("P: "+ p);
+		
+		/*
+		 * Convert IDS and save to HDFS File
+		 */
+		
+		
+		/*
+		 * Finally read results and Write to Cassandra Recommendations Table
+		 */
 		
 		// Load and parse the data
 		//String path = "data/mllib/als/test.data";
