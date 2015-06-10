@@ -1,17 +1,21 @@
 package main.java.uk.ac.imperial.lsds.play2sdg;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import scala.Tuple2;
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
-import main.java.uk.ac.imperial.lsds.file_parsers.LastFMDataParser;
+import main.java.uk.ac.imperial.lsds.io_handlers.LastFMDataParser;
+import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
+import main.java.uk.ac.imperial.lsds.models.Recommendation;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
+import org.apache.log4j.Logger;
 import org.apache.spark.api.java.*;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 import org.apache.spark.mllib.recommendation.Rating;
@@ -19,7 +23,46 @@ import org.apache.spark.SparkConf;
 
 public class SparkCollaborativeFiltering {
 
-	private static Logger logger = Logger.getLogger("main.java.uk.ac.imperial.lsds.play2sdg.SparkCollaborativeFiltering");
+	private static Logger logger = Logger.getLogger(SparkCollaborativeFiltering.class);
+	
+	/**
+	 * 
+	 * @param list
+	 * @param mail
+	 * @return
+	 */
+	public static int userIndex(List<User> list, String mail){
+		for(int i = 0; i < list.size() ; i++ ){
+			if(list.get(i).getEmail().equalsIgnoreCase( mail ))
+				return i;
+		}
+		/*
+		 * Error Case - Should never Happen!!
+		 */
+		logger.error(" Retrieving index for not existing User: "+ mail);
+		return -1;
+		
+	}
+	
+	/**
+	 * 
+	 * @param list
+	 * @param trackTitle
+	 * @return
+	 */
+	public static int trackIndex(List<Track> list, String trackTitle){
+		for(int i = 0; i < list.size(); i++ ){
+			if(list.get(i).getTitle().equalsIgnoreCase( trackTitle ))
+				return i;
+		}
+		/*
+		 * Error Case - Should never Happen!!
+		 */
+		logger.error(" Retrieving index for not existing Track: "+ trackTitle);
+		return -1;
+	}
+
+	
 	
 	public static void main(String[] args) {
 		SparkConf conf = new SparkConf().set("spark.executor.memory", "3g")
@@ -30,18 +73,18 @@ public class SparkCollaborativeFiltering {
 		
 		/*
 		 * First Fetch the Track List 
-		 
+		*/ 
 		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
-		List<Track> tracksList = parser.parseDataSet(false);
+		final List<Track> tracksList = parser.parseDataSet(false);
 		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
-		*/
+		
 		
 		/*
 		 * Fetch PlayLists From Cassandra  - aka Ratings
 		 */
 		
 		List<PlayList> allplaylists = CassandraQueryController.listAllPlaylists();
-		List<User> allusers = CassandraQueryController.listAllUsers();
+		final List<User> allusers = CassandraQueryController.listAllUsers();
 		
 		System.out.println("## Total Users Fetched # "+ allusers.size() +" ##");
 		
@@ -53,18 +96,32 @@ public class SparkCollaborativeFiltering {
 		for(PlayList p : allplaylists)
 			System.out.println("P: "+ p);
 		
-		/*
+		List<String> ratingList = new ArrayList<String>();
+ 		/*
 		 * Convert IDS and save to HDFS File
 		 */
-		
+		for(PlayList playList : allplaylists){
+			for(String track : playList.getTracks()){
+				StringBuilder sb = new StringBuilder();
+				sb.append(userIndex(allusers, playList.getUsermail()) + ",");
+				sb.append(trackIndex(tracksList, track) + ",");
+				sb.append("5.0");
+				ratingList.add(sb.toString());
+			}
+		}
 		
 		/*
-		 * Finally read results and Write to Cassandra Recommendations Table
+		 * Persist To FS
 		 */
+		//RatingsFileWriter rw = new RatingsFileWriter("/home/pg1712/workspace/play2sdg-spark-module");
+		RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		rw.persistRatingsFile(ratingList);
+		
+
 		
 		// Load and parse the data
 		//String path = "data/mllib/als/test.data";
-		String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/test.data";
+		String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
 				
 		JavaRDD<String> data = sc.textFile(path);
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
@@ -117,11 +174,47 @@ public class SparkCollaborativeFiltering {
 						new Function<Tuple2<Double, Double>, Object>() {
 							public Object call(Tuple2<Double, Double> pair) {
 								Double err = pair._1() - pair._2();
+								System.out.println("SKATA");
 								return err * err;
 							}
 						}).rdd()).mean();
+		
 		System.out.println("\n ## Rates and Predictions: "+ predictions.toArray().toString());
 		System.out.println("\n ## Mean Squared Error = " + String.format("%2f", MSE));
+		
+		/*
+		 * Finally read results and Write to Cassandra Recommendations Table
+		 */
+		
+		
+		predictions.foreach(new VoidFunction<Tuple2<Tuple2<Integer, Integer>,Double>>(){
+
+			@Override
+			public void call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
+					throws Exception {
+				//System.out.println("Tupple: "+ v1.toString());
+				logger.debug("Creating Recommendation-> user: "+v1._1()._1 + "\t track: " + v1._1()._2 + "\t score: "+v1._2() );
+				Recommendation newRec = new Recommendation(allusers.get(v1._1()._1).getEmail());
+				newRec.getRecList().put(tracksList.get(v1._1()._2).getTitle(), v1._2());
+				CassandraQueryController.persist(newRec);
+			}
+
+			
+		});
+		
+		/*
+		JavaRDD<Recommendation> recc = predictions.map(new Function<Tuple2<Tuple2<Integer, Integer>, Double>, Recommendation>() {
+
+			@Override
+			public Recommendation call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
+					throws Exception {
+				System.out.println("Tupple: "+ v1.toString());
+				System.out.println("arg1: "+v1._1()._1 + "arg2" + v1._1()._2 + "arg3: "+v1._2() );
+				return null;
+			}
+
+			
+		});*/
 
 		// model.save("myModelPath");
 		// MatrixFactorizationModel sameModel =
