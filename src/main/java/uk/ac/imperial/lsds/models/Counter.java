@@ -5,7 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import main.java.uk.ac.imperial.lsds.utils.CassandraController;
+import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 
 
 @Entity
@@ -76,7 +76,7 @@ public class Counter {
 	 */
 	
 	public static int getTracksCounter(){
-		return CassandraController.getCounterValue("tracks");
+		return CassandraQueryController.getCounterValue("tracks");
 	}
 
 }

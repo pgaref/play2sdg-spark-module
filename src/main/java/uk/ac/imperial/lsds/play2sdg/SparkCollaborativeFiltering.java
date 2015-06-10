@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import scala.Tuple2;
+import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.file_parsers.LastFMDataParser;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
-import main.java.uk.ac.imperial.lsds.utils.CassandraController;
-import main.java.uk.ac.imperial.lsds.utils.LastFMDataParser;
 
 import org.apache.spark.api.java.*;
 import org.apache.spark.api.java.function.Function;
@@ -40,8 +40,8 @@ public class SparkCollaborativeFiltering {
 		 * Fetch PlayLists From Cassandra  - aka Ratings
 		 */
 		
-		List<PlayList> allplaylists = CassandraController.listAllPlaylists();
-		List<User> allusers = CassandraController.listAllUsers();
+		List<PlayList> allplaylists = CassandraQueryController.listAllPlaylists();
+		List<User> allusers = CassandraQueryController.listAllUsers();
 		
 		System.out.println("## Total Users Fetched # "+ allusers.size() +" ##");
 		
