@@ -1,5 +1,7 @@
 package main.java.uk.ac.imperial.lsds.models;
 
+import java.io.Serializable;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -10,8 +12,9 @@ import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 
 @Entity
 @Table(name = "counters", schema = "play_cassandra@cassandra_pu")
-public class Counter {
-
+public class Counter implements Serializable{
+	
+	private static final long serialVersionUID = 5L;
 	@Id
 	private String id;
 	

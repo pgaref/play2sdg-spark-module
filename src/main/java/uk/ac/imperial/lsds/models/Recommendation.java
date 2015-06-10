@@ -1,8 +1,8 @@
 package main.java.uk.ac.imperial.lsds.models;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -11,23 +11,24 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "recommendations", schema = "play_cassandra@cassandra_pu")
-public class Recommendations implements Serializable{
+public class Recommendation implements Serializable{
 	
-	private static final long serialVersionUID = 33L;
+	private static final long serialVersionUID = 3L;
 	
 	@Id
-	private String email;
+	public String email;
 	
-	@Column(name = "song-titles")
-	public List<String> titles;
+	@Column(name = "rec-list")
+	public Map<String, Double> recMap;
 	
-	public Recommendations() {
+	
+	public Recommendation() {
 		
 	}
 	
-	public  Recommendations(String usermail){
+	public  Recommendation(String usermail){
 		this.email = usermail;
-		this.titles = new ArrayList<String>();
+		this.recMap = new HashMap<String, Double>();
 	}
 
 	/**
@@ -38,13 +39,6 @@ public class Recommendations implements Serializable{
 	}
 
 	/**
-	 * @return the titles
-	 */
-	public List<String> getTitles() {
-		return titles;
-	}
-
-	/**
 	 * @param email the email to set
 	 */
 	public void setEmail(String email) {
@@ -52,16 +46,39 @@ public class Recommendations implements Serializable{
 	}
 
 	/**
-	 * @param titles the titles to set
+	 * @return the recList
 	 */
-	public void setTitles(List<String> titles) {
-		this.titles = titles;
+	public Map<String, Double> getRecList() {
+		return recMap;
+	}
+
+	/**
+	 * @param recList the recList to set
+	 */
+	public void setRecList(Map<String, Double> recList) {
+		this.recMap = recList;
 	}
 	
-	public void addRecSong(String songTitle){
-		if(titles == null)
-			this.titles = new ArrayList<String>();
-		this.titles.add(songTitle);
+	/**
+	 * Add a new Recommendation for a user
+	 * @param track
+	 * @param score
+	 */
+	public void addRecommendation(String track , double score){
+		if(this.recMap == null)
+			this.recMap = new HashMap<String, Double>();
+		this.recMap.put(track, score);
+	}
+
+	public String toString(){
+		StringBuffer s = new StringBuffer();
+		s.append("\n--------------------------------------------------");
+		s.append("\n User: " + this.email);
+		for(String key : this.recMap.keySet()){
+			s.append("\n -> Rec Song: "+ key+ " Score: "+ recMap.get(key));
+		}
+		return s.toString();
+		
 	}
 
 }

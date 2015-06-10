@@ -13,16 +13,17 @@ import javax.persistence.Table;
 //create column family users with comparator=UTF8Type and default_validation_class=UTF8Type and key_validation_class=UTF8Type;
 public class User implements Serializable{
 	
-	private static final long serialVersionUID = 2L;
+	private static final long serialVersionUID = 1L;
 	
 	@Id
-	private String email;
+	@Column(name = "email")
+	public String email;
 
 	@Column(name = "username")
 	public String username;
 
 	@Column(name = "password")
-	private String password;
+	public String password;
 
 	@Column(name = "firstname")
 	public String firstname;
