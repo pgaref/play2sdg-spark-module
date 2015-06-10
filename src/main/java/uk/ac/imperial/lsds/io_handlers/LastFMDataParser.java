@@ -1,4 +1,4 @@
-package main.java.uk.ac.imperial.lsds.file_parsers;
+package main.java.uk.ac.imperial.lsds.io_handlers;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
-import main.java.uk.ac.imperial.lsds.models.Recommendations;
+import main.java.uk.ac.imperial.lsds.models.Recommendation;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
@@ -294,8 +294,8 @@ public class LastFMDataParser {
 		plist.addRatingSong(tracksList.get(0));
 		CassandraQueryController.persist(plist);
 		
-		Recommendations rtest = new Recommendations("pgaref@example.com");
-		rtest.addRecSong(tracksList.get(1).getTitle());
+		Recommendation rtest = new Recommendation("pgaref@example.com");
+		rtest.addRecommendation(tracksList.get(1).getTitle(), 2.0);
 		CassandraQueryController.persist(rtest);
 		
 	}

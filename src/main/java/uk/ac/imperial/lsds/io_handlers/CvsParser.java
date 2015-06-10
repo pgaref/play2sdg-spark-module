@@ -1,4 +1,4 @@
-package main.java.uk.ac.imperial.lsds.file_parsers;
+package main.java.uk.ac.imperial.lsds.io_handlers;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
