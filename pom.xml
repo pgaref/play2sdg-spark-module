@@ -93,18 +93,24 @@
   
   <build>
     <sourceDirectory>src/</sourceDirectory>
+    <!-- Include Kundera Conf files -->
+    <resources>
+      	<resource>
+        	<directory>conf/</directory>
+      	</resource>
+   	</resources>
+    
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>
-        <configuration>
-        	
+        
+        <configuration>        	
           <source>1.7</source>
           <!-- The -target argument for the Java compiler -->
           <target>1.7</target>
         </configuration>
       </plugin>
-      
 
       <!-- Spark MVN dependencies, usage: java -jar target/play2sdg-Spark-module-0.0.1-SNAPSHOT-driver.jar -->
  		<plugin>
@@ -133,6 +139,7 @@
                         <configuration>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>driver</shadedClassifierName>
+                            
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                 <!--
@@ -146,6 +153,7 @@
                                     <mainClass>main.java.uk.ac.imperial.lsds.play2sdg.SimpleApp</mainClass>
                                 </transformer>
                             </transformers>
+            					
                         </configuration>
                     </execution>
                     <execution>

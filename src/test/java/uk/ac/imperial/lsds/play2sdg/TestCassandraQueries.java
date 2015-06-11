@@ -1,10 +1,12 @@
 package test.java.uk.ac.imperial.lsds.play2sdg;
 
+import java.util.Date;
 import java.util.List;
 
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Recommendation;
+import main.java.uk.ac.imperial.lsds.models.Stats;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
@@ -55,17 +57,37 @@ public class TestCassandraQueries {
 	}
 	
 	
+	public static void testStats(){
+		Stats s  = new Stats("testStat");
+		s.getStatsMap().put("performance", 1.0);
+		s.getStatsMap().put("memory", (double)2000);
+		s.getStatsMap().put("errors", (double) 0);
+		s.setTimestamp(new Date());
+		CassandraQueryController.persist(s);
+		
+		assert(CassandraQueryController.getAllStats() == null);
+		assert(CassandraQueryController.getAllStats().size() < 1 );
+		
+		for(Stats tmp : CassandraQueryController.getAllStats()){
+			System.out.println("Got statistic: "+ tmp.getId() );
+			System.out.println("With Timestamp: "+ tmp.getTimestamp());
+			System.out.println("with Values: "+ tmp.getStatsMap());
+		}
+	}
+	
 	public static void main(String[] args) {
 		/*
 		 * TODO: Change to load Data just for the tests!
 		 */
 		
-		TestListUsers();
-		TestListSongs();
-		testListRecommendations();
+//		TestListUsers();
+//		TestListSongs();
+//		testListRecommendations();
+//		
+//		testAddRec();
+//		TestAddUserPlayList();
 		
-		testAddRec();
-		TestAddUserPlayList();
+		testStats();
 		
 	}
 

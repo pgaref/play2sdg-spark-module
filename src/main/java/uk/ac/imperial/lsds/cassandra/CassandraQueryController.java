@@ -17,6 +17,7 @@ import javax.persistence.Query;
 import main.java.uk.ac.imperial.lsds.models.Counter;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Recommendation;
+import main.java.uk.ac.imperial.lsds.models.Stats;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
@@ -281,6 +282,44 @@ public class CassandraQueryController {
 		return allPlaylists;
 	}
 
+
+	
+	/**
+	 * Stats - Cassandra JPA
+	 * @param Stats
+	 * 
+	 */
+	public static void persist(Stats s) {
+		EntityManager em = getEm();
+		Stats tmp = em.find(Stats.class, s.getId());
+		if(tmp == null){
+			em.persist(s);
+			System.out.println("\n Recommendation for : " + s.getId() + " record persisted using persistence unit -> cassandra_pu");
+		}
+		else{
+			s.getStatsMap().putAll(tmp.getStatsMap());
+			em.merge(s);
+			System.out.println("\n Recommendation for : " + s.getId() + " record merged using persistence unit -> cassandra_pu");
+		}
+		em.close();	
+	}
+	
+	public static List<Stats> getAllStats(){
+		EntityManager em = getEm();
+		Query findQuery = em.createQuery("Select s from Stats s", Stats.class);
+		findQuery.setMaxResults(Integer.MAX_VALUE);
+		List<Stats> allStats = findQuery.getResultList();
+		em.close();
+		
+		logger.debug("\n ##############  Listing All Stats, Total Size:" + allStats.size() +" ############## \n ");
+		return allStats;
+	}
+	
+	
+	/**
+	 * Entity Manager Factory and Wrapper
+	 * @return
+	 */
 	
 	private static EntityManager getEm() {
 		logger.setLevel(Level.INFO);	
@@ -295,10 +334,6 @@ public class CassandraQueryController {
 		return em;
 	}
 	
-	/**
-	 * Entity Manager Factoty 
-	 * @return
-	 */
 	
 	private static EntityManagerFactory getEmf() {
 		logger.setLevel(Level.INFO);	

@@ -3,68 +3,40 @@ package main.java.uk.ac.imperial.lsds.play2sdg;
 import java.util.ArrayList;
 import java.util.List;
 
-import scala.Tuple2;
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.io_handlers.LastFMDataParser;
 import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Recommendation;
+import main.java.uk.ac.imperial.lsds.models.Stats;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
 import org.apache.log4j.Logger;
-import org.apache.spark.api.java.*;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaDoubleRDD;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 import org.apache.spark.mllib.recommendation.Rating;
-import org.apache.spark.SparkConf;
+
+import scala.Tuple2;
 
 public class SparkCollaborativeFiltering {
 
 	private static Logger logger = Logger.getLogger(SparkCollaborativeFiltering.class);
 	
-	/**
-	 * 
-	 * @param list
-	 * @param mail
-	 * @return
-	 */
-	public static int userIndex(List<User> list, String mail){
-		for(int i = 0; i < list.size() ; i++ ){
-			if(list.get(i).getEmail().equalsIgnoreCase( mail ))
-				return i;
-		}
-		/*
-		 * Error Case - Should never Happen!!
-		 */
-		logger.error(" Retrieving index for not existing User: "+ mail);
-		return -1;
-		
-	}
-	
-	/**
-	 * 
-	 * @param list
-	 * @param trackTitle
-	 * @return
-	 */
-	public static int trackIndex(List<Track> list, String trackTitle){
-		for(int i = 0; i < list.size(); i++ ){
-			if(list.get(i).getTitle().equalsIgnoreCase( trackTitle ))
-				return i;
-		}
-		/*
-		 * Error Case - Should never Happen!!
-		 */
-		logger.error(" Retrieving index for not existing Track: "+ trackTitle);
-		return -1;
-	}
+
 
 	
 	
 	public static void main(String[] args) {
+		
+		long jobStarted = System.currentTimeMillis();
 		SparkConf conf = new SparkConf().set("spark.executor.memory", "3g")
 				.setMaster("local")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
@@ -74,7 +46,8 @@ public class SparkCollaborativeFiltering {
 		/*
 		 * First Fetch the Track List 
 		*/ 
-		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
 		final List<Track> tracksList = parser.parseDataSet(false);
 		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
 		
@@ -113,15 +86,13 @@ public class SparkCollaborativeFiltering {
 		/*
 		 * Persist To FS
 		 */
-		//RatingsFileWriter rw = new RatingsFileWriter("/home/pg1712/workspace/play2sdg-spark-module");
-		RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		RatingsFileWriter rw = new RatingsFileWriter("/home/pg1712/workspace/play2sdg-spark-module");
+		//RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		rw.persistRatingsFile(ratingList);
 		
-
-		
 		// Load and parse the data
-		//String path = "data/mllib/als/test.data";
-		String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
+		String path = "/home/pg1712/workspace/play2sdg-spark-module/ratings.data";
+		//String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
 				
 		JavaRDD<String> data = sc.textFile(path);
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
@@ -174,7 +145,6 @@ public class SparkCollaborativeFiltering {
 						new Function<Tuple2<Double, Double>, Object>() {
 							public Object call(Tuple2<Double, Double> pair) {
 								Double err = pair._1() - pair._2();
-								System.out.println("SKATA");
 								return err * err;
 							}
 						}).rdd()).mean();
@@ -185,10 +155,7 @@ public class SparkCollaborativeFiltering {
 		/*
 		 * Finally read results and Write to Cassandra Recommendations Table
 		 */
-		
-		
 		predictions.foreach(new VoidFunction<Tuple2<Tuple2<Integer, Integer>,Double>>(){
-
 			@Override
 			public void call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
 					throws Exception {
@@ -198,9 +165,16 @@ public class SparkCollaborativeFiltering {
 				newRec.getRecList().put(tracksList.get(v1._1()._2).getTitle(), v1._2());
 				CassandraQueryController.persist(newRec);
 			}
-
-			
 		});
+		
+		/*
+		 * Update Stats Table
+		 */
+		Stats sparkJobStats = new Stats("sparkCF");
+		sparkJobStats.getStatsMap().put("Job time(ms)", (double)(System.currentTimeMillis()-jobStarted) ); 
+		sparkJobStats.getStatsMap().put("Total Predictions", (double) predictions.count());
+		sparkJobStats.getStatsMap().put("Mean Squared Error", Double.valueOf(String.format("%2f", MSE)));
+		CassandraQueryController.persist(sparkJobStats);
 		
 		/*
 		JavaRDD<Recommendation> recc = predictions.map(new Function<Tuple2<Tuple2<Integer, Integer>, Double>, Recommendation>() {
@@ -219,5 +193,42 @@ public class SparkCollaborativeFiltering {
 		// model.save("myModelPath");
 		// MatrixFactorizationModel sameModel =
 		// MatrixFactorizationModel.load("myModelPath");
+	}
+	
+	/**
+	 * 
+	 * @param list
+	 * @param mail
+	 * @return
+	 */
+	public static int userIndex(List<User> list, String mail){
+		for(int i = 0; i < list.size() ; i++ ){
+			if(list.get(i).getEmail().equalsIgnoreCase( mail ))
+				return i;
+		}
+		/*
+		 * Error Case - Should never Happen!!
+		 */
+		logger.error(" Retrieving index for not existing User: "+ mail);
+		return -1;
+		
+	}
+	
+	/**
+	 * 
+	 * @param list
+	 * @param trackTitle
+	 * @return
+	 */
+	public static int trackIndex(List<Track> list, String trackTitle){
+		for(int i = 0; i < list.size(); i++ ){
+			if(list.get(i).getTitle().equalsIgnoreCase( trackTitle ))
+				return i;
+		}
+		/*
+		 * Error Case - Should never Happen!!
+		 */
+		logger.error(" Retrieving index for not existing Track: "+ trackTitle);
+		return -1;
 	}
 }
