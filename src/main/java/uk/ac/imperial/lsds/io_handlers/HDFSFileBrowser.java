@@ -61,9 +61,23 @@ public class HDFSFileBrowser {
             System.out.println("LineNo " + paths.size() + "-->"+line);
             line=br.readLine();
         }
-        br.close();
-    	
+        br.close(); 	
     }
+    
+    public static List<String> getFileLines(Path p) throws IOException{
+    	List<String> lines = new ArrayList<String>();
+    	BufferedReader br = new BufferedReader(new InputStreamReader(fileSystem.open(p)));
+        String line;
+        line=br.readLine();
+        while (line != null){
+        	lines.add(line);
+        	//System.out.println("LineNo " + paths.size() + "-->"+line);
+        	line=br.readLine();
+        }
+        br.close(); 	
+        return lines;
+    }
+    
     private static void browse(FileStatus[] status) throws FileNotFoundException, IOException {
     	
     	for (int i = 0; i < status.length; i++) {
