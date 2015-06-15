@@ -12,7 +12,6 @@ import main.java.uk.ac.imperial.lsds.models.Stats;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
-import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaDoubleRDD;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -23,20 +22,28 @@ import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 import org.apache.spark.mllib.recommendation.Rating;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import scala.Tuple2;
 
 public class SparkCollaborativeFiltering {
 
-	private static Logger logger = Logger.getLogger(SparkCollaborativeFiltering.class);
+	private static Logger logger = LoggerFactory.getLogger(SparkCollaborativeFiltering.class);
 	
-	private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
 	
 	
 	public static void main(String[] args) {
+
 		
 		long jobStarted = System.currentTimeMillis();
-		SparkConf conf = new SparkConf().set("spark.executor.memory", "3g")
+		SparkConf conf = new SparkConf()
+				.set("spark.executor.memory", "4g")
+				/*	Fraction of memory reserved for caching
+				 *	default is 0.6, which means you only get 0.4 * 4g memory for your heap
+				 */
+				//.set("spark.storage.memoryFraction", "0.2")
 				.setMaster("local")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
 				.setAppName("play2sdg Collaborative Filtering Job");
@@ -47,9 +54,10 @@ public class SparkCollaborativeFiltering {
 		*/ 
 		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
-		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
-		final List<Track> tracksList = parser.parseDataSet(false);
-		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
+		logger.info("## Listing all Tracks Stored at HDFS ## ");
+		LastFMDataParser parser = new LastFMDataParser(dataset_path);
+		final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
+		logger.info("## Fetched # "+ tracksList.size() +" Tracks ##");
 		
 		
 		/*
@@ -59,12 +67,12 @@ public class SparkCollaborativeFiltering {
 		List<PlayList> allplaylists = CassandraQueryController.listAllPlaylists();
 		final List<User> allusers = CassandraQueryController.listAllUsers();
 		
-		System.out.println("## Total Users Fetched # "+ allusers.size() +" ##");
+		logger.info("## Total Users Fetched # "+ allusers.size() +" ##");
 		
 		for(User u : allusers)
 			System.out.println("U: "+ u);
 		
-		System.out.println("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
+		logger.info("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
 		
 		for(PlayList p : allplaylists)
 			System.out.println("P: "+ p);
@@ -82,17 +90,20 @@ public class SparkCollaborativeFiltering {
 				ratingList.add(sb.toString());
 			}
 		}
+		logger.info("## Converted ratings from: "+allplaylists.size() + " playlists##");
 		
 		/*
 		 * Persist To FS
 		 */
-		RatingsFileWriter rw = new RatingsFileWriter("./");
+		RatingsFileWriter rw = new RatingsFileWriter(dataset_path);
 		//RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		rw.persistRatingsFile(ratingList);
 		
 		// Load and parse the data
-		String path = "./ratings.data";
+		String path = dataset_path +"/ratings.data";
 		//String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
+		
+		logger.info("## Persisting to HDFS -> Done ##");
 				
 		JavaRDD<String> data = sc.textFile(path);
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
