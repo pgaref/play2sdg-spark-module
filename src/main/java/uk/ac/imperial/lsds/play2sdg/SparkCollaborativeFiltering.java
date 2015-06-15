@@ -30,8 +30,7 @@ public class SparkCollaborativeFiltering {
 
 	private static Logger logger = Logger.getLogger(SparkCollaborativeFiltering.class);
 	
-
-
+	private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
 	
 	
 	public static void main(String[] args) {
@@ -47,7 +46,8 @@ public class SparkCollaborativeFiltering {
 		 * First Fetch the Track List 
 		*/ 
 		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
-		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
 		final List<Track> tracksList = parser.parseDataSet(false);
 		System.out.println("## Fetched # "+ tracksList.size() +" Tracks ##");
 		
@@ -86,12 +86,12 @@ public class SparkCollaborativeFiltering {
 		/*
 		 * Persist To FS
 		 */
-		RatingsFileWriter rw = new RatingsFileWriter("/home/pg1712/workspace/play2sdg-spark-module");
+		RatingsFileWriter rw = new RatingsFileWriter("./");
 		//RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		rw.persistRatingsFile(ratingList);
 		
 		// Load and parse the data
-		String path = "/home/pg1712/workspace/play2sdg-spark-module/ratings.data";
+		String path = "./ratings.data";
 		//String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
 				
 		JavaRDD<String> data = sc.textFile(path);

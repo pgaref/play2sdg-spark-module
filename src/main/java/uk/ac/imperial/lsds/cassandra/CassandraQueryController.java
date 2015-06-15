@@ -315,6 +315,16 @@ public class CassandraQueryController {
 		return allStats;
 	}
 	
+	//ALTER KEYSPACE play_cassandra WITH REPLICATION =   { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
+	public static int UpdateKeyspaceRF(String ks,int rf){
+		EntityManager em = getEm();
+		Query alterQ = em.createQuery("ALTER KEYSPACE "+ks +" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : " + rf +"};");
+		int result = alterQ.executeUpdate();
+		em.close();
+		
+		logger.debug("\n ##############  Altering keyspace :"+ ks  + " with new Replication factor:" + rf +" ############## \n ");
+		return result;
+	}
 	
 	/**
 	 * Entity Manager Factory and Wrapper

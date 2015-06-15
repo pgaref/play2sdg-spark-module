@@ -104,6 +104,8 @@ public class PlayList implements Serializable {
 	 * @return the tracks
 	 */
 	public List<String> getTracks() {
+		if(tracks == null)
+			this.tracks = new ArrayList<String>();
 		return tracks;
 	}
 

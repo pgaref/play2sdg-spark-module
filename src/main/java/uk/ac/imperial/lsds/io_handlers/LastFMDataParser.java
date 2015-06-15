@@ -52,6 +52,7 @@ public class LastFMDataParser {
 
 	public LastFMDataParser(String path) {
 		
+		
 		LastFMDataParser.path = path;
 		if(path.startsWith("hdfs"))
 			LastFMDataParser.isHDFS= true;
@@ -272,14 +273,15 @@ public class LastFMDataParser {
 	}
 
 	
+	
 	public static void main(String[] args) {
 		
-		logger.setLevel(Level.ERROR);
-		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
+		logger.setLevel(Level.DEBUG);
 		
-		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
-		//LastFMDataParser dataset = new LastFMDataParser("data/LastFM/lastfm_subset", true);
-		//LastFMDataSet dataset = new LastFMDataSet("data/LastFM/lastfm_train");
+		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train");
+		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
+		
 		
 		List<Track> tracksList = parser.parseDataSet(true);
 		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );

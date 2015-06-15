@@ -111,7 +111,46 @@
           <target>1.7</target>
         </configuration>
       </plugin>
+      
+    <!-- Utilities Jar  
+       <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.5.5</version>
+            <configuration>
+                <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
 
+            </configuration>
+            <executions>
+                <execution>
+                    <id>assemble-all</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>single</goal>
+                    </goals>
+                </execution>
+            </executions>
+      </plugin>
+ 
+      <plugin>
+      		<groupId>org.apache.maven.plugins</groupId>
+      		<artifactId>maven-jar-plugin</artifactId>
+      		<version>2.4</version>
+      		<configuration>
+       		<finalName>utilitiesJar</finalName> 
+        	<archive>
+          	<manifest>
+            	<addClasspath>true</addClasspath>
+            	<classpathPrefix>target/</classpathPrefix>
+            	<mainClass>main.java.uk.ac.imperial.lsds.play2sdg.PrepareData</mainClass>
+          	</manifest>
+        		</archive>
+     		 </configuration>
+   		 </plugin>
+	 -->
+	 
       <!-- Spark MVN dependencies, usage: java -jar target/play2sdg-Spark-module-0.0.1-SNAPSHOT-driver.jar -->
  		<plugin>
                 <groupId>org.apache.maven.plugins</groupId>
