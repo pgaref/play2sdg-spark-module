@@ -20,8 +20,11 @@ public class PrepareData {
 	/*
 	 * TODO: pass these Values as arguments 
 	 */
-	private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	private static String userdata_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt";
+	//private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	//private static String userdata_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt";
+	
+	private static String dataset_path = "data/LastFM/lastfm_subset";
+	private static String userdata_path = "data/users.txt";
 	
 	private static Logger  logger = Logger.getLogger(PrepareData.class);
 	private List<User> users;
@@ -74,15 +77,17 @@ public class PrepareData {
 		this.users = prepareUsers();
 
 		this.tracks = prepareTracks();
-		
-		this.playlists = preparePlayLists(20);
+		/*
+		 * Configurable number of random songs in the playlist
+		 */
+		this.playlists = preparePlayLists(50);
 		
 	}
 	
 	public static void main(String[] args) {
 		
 		/*
-		 * Arguments so far: 1)UserFile 2)TracksFile 3)Number of tracks in default Playlist
+		 * Configurable Arguments so far: 1)UserFile 2)TracksFile 3)Number of tracks in default Playlist
 		 */
 		logger.setLevel(Level.DEBUG);
 		logger.debug("Initating Prepare  Data for paths: Data path: " + dataset_path + " - User path:  "+ userdata_path+" ### ");

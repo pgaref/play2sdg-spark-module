@@ -69,6 +69,8 @@ public class CassandraQueryController {
 	public static List<User> listAllUsers() {
 		EntityManager em = getEm();;
 		Query findQuery = em.createQuery("Select p from User p", User.class);
+		findQuery.setMaxResults(Integer.MAX_VALUE);
+		@SuppressWarnings("unchecked")
 		List<User> allUsers = findQuery.getResultList();
 		em.close();
 		
@@ -277,6 +279,7 @@ public class CassandraQueryController {
 	public static List<PlayList> listAllPlaylists(){
 		EntityManager em = getEmf().createEntityManager();
 		Query findQuery = em.createQuery("Select p from PlayList p", PlayList.class);
+		findQuery.setMaxResults(Integer.MAX_VALUE);
 		List<PlayList> allPlaylists= findQuery.getResultList();
 		em.close();
 		return allPlaylists;

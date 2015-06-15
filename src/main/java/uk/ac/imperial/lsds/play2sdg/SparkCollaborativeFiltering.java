@@ -31,41 +31,50 @@ public class SparkCollaborativeFiltering {
 
 	private static Logger logger = LoggerFactory.getLogger(SparkCollaborativeFiltering.class);
 	
-	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	
+	//private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	private static final String dataset_path = "data/LastFM/lastfm_subset";
+	private static List<PlayList> allplaylists;
+	private static List<User> allusers;
+	private static List<Track> tracksList;
 	
 	public static void main(String[] args) {
 
-		
 		long jobStarted = System.currentTimeMillis();
 		SparkConf conf = new SparkConf()
-				.set("spark.executor.memory", "4g")
 				/*	Fraction of memory reserved for caching
 				 *	default is 0.6, which means you only get 0.4 * 4g memory for your heap
 				 */
-				//.set("spark.storage.memoryFraction", "0.2")
+				//.set("spark.storage.memoryFraction", "0.1")
+				//spark-submit alternative: --driver-memory 2g
+				.set("spark.driver.memory", "4g")
+				.set("spark.executor.memory","4g")
+				.set("spark.driver.maxResultSize","4g")
 				.setMaster("local")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
 				.setAppName("play2sdg Collaborative Filtering Job");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		
+		
+		
 		/*
-		 * First Fetch the Track List 
+		 *  Fetch the Track List 
 		*/ 
 		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
 		logger.info("## Listing all Tracks Stored at HDFS ## ");
-		LastFMDataParser parser = new LastFMDataParser(dataset_path);
-		final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
+		/*
+		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
+		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
+		 */
+		tracksList = CassandraQueryController.listAllTracks();
 		logger.info("## Fetched # "+ tracksList.size() +" Tracks ##");
-		
 		
 		/*
 		 * Fetch PlayLists From Cassandra  - aka Ratings
 		 */
 		
-		List<PlayList> allplaylists = CassandraQueryController.listAllPlaylists();
-		final List<User> allusers = CassandraQueryController.listAllUsers();
+		allplaylists = CassandraQueryController.listAllPlaylists();
+		allusers = CassandraQueryController.listAllUsers();
 		
 		logger.info("## Total Users Fetched # "+ allusers.size() +" ##");
 		
@@ -76,6 +85,8 @@ public class SparkCollaborativeFiltering {
 		
 		for(PlayList p : allplaylists)
 			System.out.println("P: "+ p);
+		
+		
 		
 		List<String> ratingList = new ArrayList<String>();
  		/*
@@ -160,7 +171,7 @@ public class SparkCollaborativeFiltering {
 							}
 						}).rdd()).mean();
 		
-		System.out.println("\n ## Rates and Predictions: "+ predictions.toArray().toString());
+		System.out.println("\n ## Rates and Predictions Size: "+ predictions.toArray().size());
 		System.out.println("\n ## Mean Squared Error = " + String.format("%2f", MSE));
 		
 		/*
@@ -172,7 +183,9 @@ public class SparkCollaborativeFiltering {
 					throws Exception {
 				//System.out.println("Tupple: "+ v1.toString());
 				logger.debug("Creating Recommendation-> user: "+v1._1()._1 + "\t track: " + v1._1()._2 + "\t score: "+v1._2() );
+				allusers = CassandraQueryController.listAllUsers();
 				Recommendation newRec = new Recommendation(allusers.get(v1._1()._1).getEmail());
+				tracksList = CassandraQueryController.listAllTracks();
 				newRec.getRecList().put(tracksList.get(v1._1()._2).getTitle(), v1._2());
 				CassandraQueryController.persist(newRec);
 			}
@@ -221,6 +234,7 @@ public class SparkCollaborativeFiltering {
 		 * Error Case - Should never Happen!!
 		 */
 		logger.error(" Retrieving index for not existing User: "+ mail);
+		//TODO: CHECK THIS
 		return -1;
 		
 	}
