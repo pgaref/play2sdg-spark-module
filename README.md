@@ -8,6 +8,8 @@
 http://labrosa.ee.columbia.edu/millionsong/lastfm
 
 
+## Create rest api parser and save to both log and image##
+
 ========TODO: Solve Mesos lib dependency =======
 
 ## Project Jar usage:
