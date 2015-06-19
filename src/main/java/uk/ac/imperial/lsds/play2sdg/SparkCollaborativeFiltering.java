@@ -31,8 +31,8 @@ public class SparkCollaborativeFiltering {
 
 	private static Logger logger = LoggerFactory.getLogger(SparkCollaborativeFiltering.class);
 	
-	//private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	private static final String dataset_path = "data/LastFM/lastfm_subset";
+	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	//private static final String dataset_path = "data/LastFM/lastfm_subset";
 	private static List<PlayList> allplaylists;
 	private static List<User> allusers;
 	private static List<Track> tracksList;
@@ -66,7 +66,9 @@ public class SparkCollaborativeFiltering {
 		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
 		 */
-		tracksList = CassandraQueryController.listAllTracks();
+		//tracksList = CassandraQueryController.listAllTracks();
+		LastFMDataParser parser = new LastFMDataParser(dataset_path);
+		tracksList = LastFMDataParser.parseDataSet(false);
 		logger.info("## Fetched # "+ tracksList.size() +" Tracks ##");
 		
 		/*
@@ -176,7 +178,8 @@ public class SparkCollaborativeFiltering {
 		
 		/*
 		 * Finally read results and Write to Cassandra Recommendations Table
-		 */
+		 * Avoid Distributeed Spark way! -> Static data issue (allTracks and allUsers Lists)
+		 *
 		predictions.foreach(new VoidFunction<Tuple2<Tuple2<Integer, Integer>,Double>>(){
 			@Override
 			public void call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
@@ -189,15 +192,18 @@ public class SparkCollaborativeFiltering {
 				newRec.getRecList().put(tracksList.get(v1._1()._2).getTitle(), v1._2());
 				CassandraQueryController.persist(newRec);
 			}
-		});
+		});*/
+		
+
+		MapPredictions2Tracks(predictions);
 		
 		/*
 		 * Update Stats Table
 		 */
 		Stats sparkJobStats = new Stats("sparkCF");
-		sparkJobStats.getStatsMap().put("Job time(ms)", (double)(System.currentTimeMillis()-jobStarted) ); 
-		sparkJobStats.getStatsMap().put("Total Predictions", (double) predictions.count());
-		sparkJobStats.getStatsMap().put("Mean Squared Error", Double.valueOf(String.format("%2f", MSE)));
+		sparkJobStats.getStatsMap().put("Job time(s)", Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+"") ); 
+		sparkJobStats.getStatsMap().put("Total Predictions", Double.parseDouble( ""+ predictions.count() ));
+		sparkJobStats.getStatsMap().put("Mean Squared Error",  MSE );
 		CassandraQueryController.persist(sparkJobStats);
 		
 		/*
@@ -255,5 +261,19 @@ public class SparkCollaborativeFiltering {
 		 */
 		logger.error(" Retrieving index for not existing Track: "+ trackTitle);
 		return -1;
+	}
+	
+	/**
+	 * Method Mapping generated Recommendations to Tracks and Users 
+	 * @param predictions
+	 */
+	
+	public static void MapPredictions2Tracks(JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions){
+		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
+			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
+			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
+			newRec.getRecList().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
+			CassandraQueryController.persist(newRec);
+		}
 	}
 }
