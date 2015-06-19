@@ -33,8 +33,8 @@ public class CassandraQueryController {
 	static Logger  logger = Logger.getLogger("main.java.uk.ac.imperial.lsds.utils.CassandraController");
 	static EntityManagerFactory emf;
 	
-	static Counter songCounter;
-	static Counter userCounter;
+	static Counter songCounter = new Counter("tracks");
+	static Counter userCounter = new Counter("user");
 	
 	/**
 	 * User - Cassandra JPA
@@ -47,7 +47,7 @@ public class CassandraQueryController {
 		User tmp = em.find(User.class, user.getEmail());
 		if(tmp == null){
 			em.persist(user);
-			increment(userCounter, "user");
+			increment(userCounter);
 		}
 		else
 			em.merge(user);
@@ -93,7 +93,7 @@ public class CassandraQueryController {
 		Track tmp = em.find(Track.class, song.getTrack_id());
 		if(tmp == null){
 			em.persist(song);
-			increment(songCounter, "tracks");
+			increment(songCounter);
 			logger.debug("\n Track: " + song.getTitle() + " record persisted using persistence unit -> " + getEmf().getProperties());
 		}
 		else{
@@ -107,7 +107,7 @@ public class CassandraQueryController {
 	public static void remove(Track song) {
 		EntityManager em = getEm();
 		em.remove(song);
-		decrement(songCounter, "tracks");
+		decrement(songCounter);
 		em.close();
 		logger.debug("\n Track: " + song.getTitle() + " record REMOVED using persistence unit ->" +getEmf().getProperties());
 	}
@@ -154,40 +154,65 @@ public class CassandraQueryController {
 	 * 
 	 */
 	
-	public static void increment(Counter counter, String id) {
+	public static void increment(Counter counter) {
 		EntityManager em = getEm();
-		Counter tmp = em.find(Counter.class, id);
+		Counter tmp = em.find(Counter.class, counter.getId());
 		if(tmp == null){
-			songCounter = new Counter(id);
-			songCounter.incrementCounter();
-			em.persist(songCounter);
-			logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			if(counter.getId() == "tracks"){
+				songCounter.incrementCounter();
+				em.persist(songCounter);
+				logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			}
+			else if(counter.getId() == "user"){
+				userCounter.incrementCounter();
+				em.persist(userCounter);
+				logger.debug("Generic: " + userCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			}
 		}
 		else{
-			songCounter = tmp;
-			songCounter.incrementCounter();
-			em.merge(songCounter);
-			logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			if(counter.getId() == "tracks"){
+				songCounter.incrementCounter();
+				em.merge(songCounter);
+				logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			}
+			else if(counter.getId() == "user"){
+				userCounter.incrementCounter();
+				em.merge(userCounter);
+				logger.debug("Generic: " + userCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			}
 		}
 		em.close();
 		
 		
 	}
 	
-	public static void decrement(Counter counter, String id) {
+	public static void decrement(Counter counter) {
 		EntityManager em = getEm();
-		Counter tmp = em.find(Counter.class, id);
+		Counter tmp = em.find(Counter.class, counter.getId());
 		if(tmp == null){
-			songCounter = new Counter(id);
-			songCounter.decrementCounter();
-			em.persist(songCounter);
-			logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			if(counter.getId() == "tracks"){
+				songCounter.decrementCounter();
+				em.persist(songCounter);
+				logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			}
+			else if(counter.getId() == "user"){
+				userCounter.decrementCounter();
+				em.persist(userCounter);
+				logger.debug("Generic: " + userCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
+			}
 		}
 		else{
-			songCounter = tmp;
-			songCounter.decrementCounter();
-			em.merge(songCounter);
-			logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			if(counter.getId() == "tracks"){
+				songCounter.decrementCounter();
+				em.merge(songCounter);
+				logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			}
+			else if(counter.getId() == "user"){
+				userCounter.decrementCounter();
+				em.merge(userCounter);
+				logger.debug("Generic: " + userCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
+			}
+			
 		}
 		em.close();
 

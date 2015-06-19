@@ -14,10 +14,10 @@
  
  <properties>
  	<property name="strategy.class" value="SimpleStrategy" />
- 	<property name="replcation.factor" value="3" />
+ 	<property name="replcation.factor" value="1" />
  	<property name="kundera.ddl.auto.prepare" value="update" />
- 	<!--<property name="kundera.nodes" value="localhost"/>-->
- 	<property name="kundera.nodes" value="wombat28.doc.res.ic.ac.uk"/>
+ 	<!-- <property name="kundera.nodes" value="localhost"/> -->
+ 	<property name="kundera.nodes" value="wombat26.doc.res.ic.ac.uk"/>
  	<property name="kundera.port" value="9160"/>
  	<property name="kundera.keyspace" value="play_cassandra"/>
  	<property name="kundera.dialect" value="cassandra"/>

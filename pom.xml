@@ -87,6 +87,14 @@
     	<artifactId>slf4j-api</artifactId>
     	<version>1.7.7</version>
 	</dependency>
+	
+	<!-- Used to export JChart Images to images --> 
+	<dependency>
+		<groupId>com.itextpdf</groupId>
+		<artifactId>itextpdf</artifactId>
+		<version>5.5.6</version>
+	</dependency>
+	
  
 
   </dependencies>

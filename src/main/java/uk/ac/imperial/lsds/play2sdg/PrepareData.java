@@ -20,11 +20,11 @@ public class PrepareData {
 	/*
 	 * TODO: pass these Values as arguments 
 	 */
-	//private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	//private static String userdata_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt";
+	private static String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	private static String userdata_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt";
 	
-	private static String dataset_path = "data/LastFM/lastfm_subset";
-	private static String userdata_path = "data/users.txt";
+//	private static String dataset_path = "data/LastFM/lastfm_subset";
+//	private static String userdata_path = "data/users.txt";
 	
 	private static Logger  logger = Logger.getLogger(PrepareData.class);
 	private List<User> users;
@@ -80,7 +80,7 @@ public class PrepareData {
 		/*
 		 * Configurable number of random songs in the playlist
 		 */
-		this.playlists = preparePlayLists(50);
+		this.playlists = preparePlayLists(20);
 		
 	}
 	

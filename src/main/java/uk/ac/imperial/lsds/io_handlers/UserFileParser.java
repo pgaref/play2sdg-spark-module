@@ -141,17 +141,17 @@ public class UserFileParser {
 	
 	
 	
-//	public static void main(String[] args) {
-//		UserFileParser userFileParser = new UserFileParser("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt");
-//		List<User> usersFromFile = userFileParser.ParseUsers(); 
-//
-////ALTER KEYSPACE play_cassandra WITH REPLICATION =   { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
-////		CassandraQueryController.UpdateKeyspaceRF("play_cassandra", 3);
-//		for(User u : usersFromFile){
-//			System.out.println("\n Read user: "+ u);
-//			CassandraQueryController.persist(u);
-//			System.out.println("Persisted ...");
-//		}
-//	}
+	public static void main(String[] args) {
+		UserFileParser userFileParser = new UserFileParser("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt");
+		List<User> usersFromFile = userFileParser.ParseUsers(); 
+
+//ALTER KEYSPACE play_cassandra WITH REPLICATION =   { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
+//		CassandraQueryController.UpdateKeyspaceRF("play_cassandra", 3);
+		for(User u : usersFromFile){
+			System.out.println("\n Read user: "+ u);
+			CassandraQueryController.persist(u);
+			System.out.println("Persisted ...");
+		}
+	}
 
 }
