@@ -1,5 +1,9 @@
 package main.java.uk.ac.imperial.lsds.rest_client;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+
 public class MesosMasterStats {
 
 	
@@ -17,12 +21,23 @@ public class MesosMasterStats {
 	
 	private int activated_slaves;
 	
+	private ArrayList<Double> slaves_load_1min;
+	private ArrayList<Double> slaves_load_5min;
+	
+	private Date timestamp;
+	
 	public MesosMasterStats() {
 		// TODO Auto-generated constructor stub
+		this.timestamp = new Date();
+		slaves_load_1min = new ArrayList<Double>();
+		slaves_load_5min = new ArrayList<Double>();
 	}
 	
 	public MesosMasterStats(int act_slaves) {
 		this.activated_slaves = act_slaves;
+		this.timestamp = new Date();
+		slaves_load_1min = new ArrayList<Double>();
+		slaves_load_5min = new ArrayList<Double>();
 	}
 
 
@@ -152,10 +167,67 @@ public class MesosMasterStats {
 		this.activated_slaves = activated_slaves;
 	}
 	
+	/**
+	 * @return the timestamp
+	 */
+	public Date getTimestamp() {
+		return timestamp;
+	}
+
+	/**
+	 * @param timestamp the timestamp to set
+	 */
+	public void setTimestamp(Date timestamp) {
+		this.timestamp = timestamp;
+	}
+
+
+	/**
+	 * @return the slaves_load_1min
+	 */
+	public ArrayList<Double> getSlaves_load_1min() {
+		return slaves_load_1min;
+	}
+
+	/**
+	 * @param slaves_load_1min the slaves_load_1min to set
+	 */
+	public void setSlaves_load_1min(ArrayList<Double> slaves_load_1min) {
+		this.slaves_load_1min = slaves_load_1min;
+	}
+
+	/**
+	 * @return the slaves_load_5min
+	 */
+	public ArrayList<Double> getSlaves_load_5min() {
+		return slaves_load_5min;
+	}
+
+	/**
+	 * @param slaves_load_5min the slaves_load_5min to set
+	 */
+	public void setSlaves_load_5min(ArrayList<Double> slaves_load_5min) {
+		this.slaves_load_5min = slaves_load_5min;
+	}
+
 	@Override
 	public String toString(){
-		return "#### Mesos Master Stats ###"
-				+ "Active Slaves: "+ this.activated_slaves;
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+		String format = formatter.format(timestamp);
+		return "#### Mesos Master Stats ###" +
+				"Active slaves: " + this.activated_slaves
+				+ "\nTS: " + format 
+				+ "\nslaves load 1min: "+ this.slaves_load_1min.toString()
+				+ "\nslaves load 5min: "+ this.slaves_load_5min.toString()
+				+ "\ntotal 	cpus: "+ this.total_cpus
+				+ "\nidle cpus: " + this.idle_cpus
+				+ "\nused cpus: "+this.used_cpus
+				
+				+ "\ntotal mem: " + this.total_mem
+				+ "\nidle mem: " + this.idle_mem
+				+ "\nused mem: " + this.used_mem
+				+ "\n-------------------------";
+		
 	}
 
 }
