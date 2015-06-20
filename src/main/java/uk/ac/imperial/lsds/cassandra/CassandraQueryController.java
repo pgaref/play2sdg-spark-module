@@ -1,8 +1,10 @@
 package main.java.uk.ac.imperial.lsds.cassandra;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -112,7 +114,6 @@ public class CassandraQueryController {
 		logger.debug("\n Track: " + song.getTitle() + " record REMOVED using persistence unit ->" +getEmf().getProperties());
 	}
 	
-	
 	public static Track findTrackbyTitle(String title) {
 		/*
 		 * Use NativeQuery to avoid Strings being used as cassandra keywords!
@@ -133,7 +134,6 @@ public class CassandraQueryController {
 		return (Track) findQuery.getResultList().get(0);
 	}
 	
-	
 	public static List<Track> listAllTracks() {
 		EntityManager em = getEm();
 		Query findQuery = em.createQuery("Select s from Track s", Track.class);
@@ -146,6 +146,34 @@ public class CassandraQueryController {
 //			logger.debug("\n Got Song: \n" + s);
 //		}
 		return allSongs;
+	}
+	
+	public static List<Track> listAllTracksWithPagination() {
+		
+		EntityManager em = getEm();
+		List<Track> allTracks = new ArrayList<Track>();
+		
+		Query firstPage =em.createQuery("Select s from Track s", Track.class);
+		firstPage.setMaxResults(10000);
+		
+		@SuppressWarnings("unchecked")
+		List<Track> result = firstPage.getResultList();
+		logger.debug("\n ##############  Listing First Track page ############## \n ");
+		allTracks.addAll(result);
+		em.close();
+		while(allTracks.size() < CassandraQueryController.getCounterValue("tracks") ){
+			em = getEm();
+			Query findQuery = em
+				.createNativeQuery("SELECT * FROM tracks WHERE token(key) > token('"+ allTracks.get(allTracks.size()-1).getTrack_id() +"') LIMIT 10000;", Track.class);
+			findQuery.setMaxResults(10000);
+			@SuppressWarnings("unchecked")
+			List<Track> nextPageTracks = findQuery. getResultList();
+			allTracks.addAll(nextPageTracks);
+			logger.debug("\n ##############  Listing Next Track page, Current Size: "+ allTracks.size() +"  After TrackID: "+ allTracks.get(allTracks.size()-1).getTrack_id() +" ############## \n ");
+			em.close();
+		} 
+		
+		return allTracks;
 	}
 	
 	/**
@@ -309,7 +337,43 @@ public class CassandraQueryController {
 		em.close();
 		return allPlaylists;
 	}
-
+	
+	public static List<PlayList> getUserPlayLists(String usermail){
+		EntityManager em = getEmf().createEntityManager();
+		Query findQuery = em
+				.createQuery("Select p from PlayList p where p.usermail = " +usermail );
+		@SuppressWarnings("unchecked")
+		List<PlayList> tmp =  (List<PlayList>) findQuery.getResultList();
+		
+		//Avoid null saved playlists - scala Option is another alternative to catch null pointers
+		if(tmp == null){
+			logger.debug("User: "+ usermail + " has NO playlists!");
+			return null;
+		}	
+		//Avoid null pointers in SCALA viewsongs!
+		for(PlayList p : tmp ){
+			if(p.getTracks() == null)
+				p.setTracks(new ArrayList<String>());
+		}
+		logger.debug("\n\n---->>> getUserPlayLists QUery returned: "+ tmp) ;
+		return tmp;
+	}
+	
+	public static boolean deleteUserPlayListSong(UUID playlistid, String song){
+		EntityManager em = getEm();
+		Query findQuery = em.createNativeQuery("Select * from playlists  where token(id) = token("+ playlistid + ");", PlayList.class );
+		@SuppressWarnings("unchecked")
+		List<PlayList> p = findQuery.getResultList();
+		assert(p.size() != 1);
+		for(int i =0 ; i < p.get(0).getTracks().size(); i++){
+			if(p.get(0).getTracks().get(i).compareTo(song) == 0){
+				p.get(0).getTracks().remove(i);
+				em.merge(p.get(0));
+				return true;
+			}
+		}			
+		return false;
+	}
 
 	
 	/**

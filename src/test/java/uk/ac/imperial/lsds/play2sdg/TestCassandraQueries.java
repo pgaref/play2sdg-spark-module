@@ -1,5 +1,6 @@
 package test.java.uk.ac.imperial.lsds.play2sdg;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -75,6 +76,13 @@ public class TestCassandraQueries {
 		}
 	}
 	
+	
+	public static void testDeletePlayList(){
+		List<PlayList> found  =  (List<PlayList>) CassandraQueryController.getUserPlayLists("pgaref@example.com");
+		boolean result = CassandraQueryController.deleteUserPlayListSong(found.get(0).getId(), "Yunu Yucu Ninu");
+		System.out.println("Delete query result: "+ result);
+	}
+	
 	public static void main(String[] args) {
 		/*
 		 * TODO: Change to load Data just for the tests!
@@ -87,7 +95,8 @@ public class TestCassandraQueries {
 //		testAddRec();
 //		TestAddUserPlayList();
 		
-		testStats();
+//		testStats();
+		testDeletePlayList();
 		
 	}
 
