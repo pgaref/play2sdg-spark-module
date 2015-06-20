@@ -46,7 +46,7 @@ public class SparkCollaborativeFiltering {
 				 */
 				//.set("spark.storage.memoryFraction", "0.1")
 				//spark-submit alternative: --driver-memory 2g
-				.set("spark.driver.memory", "4g")
+				.set("spark.driver.memory", "7g")
 				.set("spark.executor.memory","4g")
 				.set("spark.driver.maxResultSize","4g")
 				.setMaster("local")
@@ -66,9 +66,9 @@ public class SparkCollaborativeFiltering {
 		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
 		 */
-		//tracksList = CassandraQueryController.listAllTracks();
-		LastFMDataParser parser = new LastFMDataParser(dataset_path);
-		tracksList = LastFMDataParser.parseDataSet(false);
+		tracksList = CassandraQueryController.listAllTracksWithPagination();
+		//LastFMDataParser parser = new LastFMDataParser(dataset_path);
+		//tracksList = LastFMDataParser.parseDataSet(false);
 		logger.info("## Fetched # "+ tracksList.size() +" Tracks ##");
 		
 		/*
