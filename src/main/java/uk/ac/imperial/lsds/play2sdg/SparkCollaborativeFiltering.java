@@ -56,7 +56,7 @@ public class SparkCollaborativeFiltering {
 				.set("spark.executor.memory","4g")
 				.set("spark.driver.maxResultSize","7g")
 				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
-				.setMaster("local[16]")
+				//.setMaster("local[16]")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
 				.setAppName("play2sdg Collaborative Filtering Job");
 		JavaSparkContext sc = new JavaSparkContext(conf);

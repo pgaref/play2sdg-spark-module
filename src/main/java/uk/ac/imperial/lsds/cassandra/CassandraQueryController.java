@@ -278,7 +278,11 @@ public class CassandraQueryController {
 	 */
 	public static void persist(Recommendation r) {
 		EntityManager em = getEm();
-		Recommendation tmp = em.find(Recommendation.class, r.getEmail());
+		Query findQuery = em.createNativeQuery("Select * from recommendations where email = '" +  r.getEmail() +"';", Recommendation.class);
+		findQuery.setMaxResults(1);
+		@SuppressWarnings("unchecked")
+		List<Recommendation> results = findQuery.getResultList();
+		Recommendation tmp =  ( ((results == null) || (results.size() ==0)) ? null :  results.get(0) );
 		if(tmp == null){
 			em.persist(r);
 			System.out.println("\n Recommendation for : " + r.getEmail() + " record persisted using persistence unit -> cassandra_pu");
