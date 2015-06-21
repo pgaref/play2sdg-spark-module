@@ -114,6 +114,18 @@ public class CassandraQueryController {
 		logger.debug("\n Track: " + song.getTitle() + " record REMOVED using persistence unit ->" +getEmf().getProperties());
 	}
 	
+	public static Track findByTrackID(String id){
+		EntityManager em = getEmf().createEntityManager();
+		//Track t = em.find(Track.class, id);
+		Query q = em.createNativeQuery("SELECT * FROM \"tracks\" WHERE \"key\"='"+id+"';", Track.class);
+		q.setMaxResults(1);
+		List<Track> t = q.getResultList();
+		if(t == null)
+			logger.debug("Tack "+ id +" not found in the database!");
+		return t.get(0);
+		
+	}
+	
 	public static Track findTrackbyTitle(String title) {
 		/*
 		 * Use NativeQuery to avoid Strings being used as cassandra keywords!
@@ -389,9 +401,14 @@ public class CassandraQueryController {
 			System.out.println("\n Recommendation for : " + s.getId() + " record persisted using persistence unit -> cassandra_pu");
 		}
 		else{
-			s.getStatsMap().putAll(tmp.getStatsMap());
-			em.merge(s);
-			System.out.println("\n Recommendation for : " + s.getId() + " record merged using persistence unit -> cassandra_pu");
+			/*
+			 * Update the existing Stat object with fresh values
+			 * The other way round would cause old stats data to remain untouched!!
+			 */
+			tmp.setTimestamp(s.getTimestamp());
+			tmp.getStatsMap().putAll(s.getStatsMap());
+			em.merge(tmp);
+			System.out.println("\n Recommendation for : " + tmp.getId() + " record merged using persistence unit -> cassandra_pu");
 		}
 		em.close();	
 	}
