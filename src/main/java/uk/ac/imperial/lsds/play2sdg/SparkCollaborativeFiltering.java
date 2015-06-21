@@ -1,7 +1,9 @@
 package main.java.uk.ac.imperial.lsds.play2sdg;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.io_handlers.LastFMDataParser;
@@ -25,8 +27,10 @@ import org.apache.spark.mllib.recommendation.Rating;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import scala.Tuple2;
+import com.datastax.spark.connector.writer.WriteConf;
 
+import scala.Tuple2;
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 public class SparkCollaborativeFiltering {
 
 	private static Logger logger = LoggerFactory.getLogger(SparkCollaborativeFiltering.class);
@@ -34,7 +38,9 @@ public class SparkCollaborativeFiltering {
 	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
 	//private static final String dataset_path = "data/LastFM/lastfm_subset";
 	private static List<PlayList> allplaylists;
+	private static Map<String, Integer> usersMap;
 	private static List<User> allusers;
+	private static Map<String, Integer> tracksMap;
 	private static List<Track> tracksList;
 	
 	public static void main(String[] args) {
@@ -48,12 +54,12 @@ public class SparkCollaborativeFiltering {
 				//spark-submit alternative: --driver-memory 2g
 				.set("spark.driver.memory", "7g")
 				.set("spark.executor.memory","4g")
-				.set("spark.driver.maxResultSize","4g")
-				.setMaster("local")
+				.set("spark.driver.maxResultSize","7g")
+				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
+				.setMaster("local[16]")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
 				.setAppName("play2sdg Collaborative Filtering Job");
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		
 		
 		
 		/*
@@ -61,15 +67,17 @@ public class SparkCollaborativeFiltering {
 		*/ 
 		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
 		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
-		logger.info("## Listing all Tracks Stored at HDFS ## ");
+		logger.info("## Listing all Tracks Stored at Cassandra ## ");
 		/*
 		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
 		 */
 		tracksList = CassandraQueryController.listAllTracksWithPagination();
+		tracksMap = generateTrackMap( tracksList );
 		//LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		//tracksList = LastFMDataParser.parseDataSet(false);
-		logger.info("## Fetched # "+ tracksList.size() +" Tracks ##");
+		
+		logger.info("## Fetched # "+ tracksMap.size() +" Tracks ##");
 		
 		/*
 		 * Fetch PlayLists From Cassandra  - aka Ratings
@@ -77,11 +85,14 @@ public class SparkCollaborativeFiltering {
 		
 		allplaylists = CassandraQueryController.listAllPlaylists();
 		allusers = CassandraQueryController.listAllUsers();
+		usersMap = generateUserMap( allusers );
 		
-		logger.info("## Total Users Fetched # "+ allusers.size() +" ##");
+		logger.info("## Total Users Fetched # "+ usersMap.size() +" ##");
 		
-		for(User u : allusers)
+		
+		for(String u : usersMap.keySet())
 			System.out.println("U: "+ u);
+		
 		
 		logger.info("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
 		
@@ -97,8 +108,8 @@ public class SparkCollaborativeFiltering {
 		for(PlayList playList : allplaylists){
 			for(String track : playList.getTracks()){
 				StringBuilder sb = new StringBuilder();
-				sb.append(userIndex(allusers, playList.getUsermail()) + ",");
-				sb.append(trackIndex(tracksList, track) + ",");
+				sb.append(usersMap.get(playList.getUsermail()) + ",");
+				sb.append(tracksMap.get(track) + ",");
 				sb.append("5.0");
 				ratingList.add(sb.toString());
 			}
@@ -194,8 +205,33 @@ public class SparkCollaborativeFiltering {
 			}
 		});*/
 		
+		
+		/**
+		 * Create recommendations based on stored Track and User id
+		 * Similar Implementation with -> MapPredictions2Tracks(predictions) method
+		 */
+		List<Recommendation> newUserSongRec = new ArrayList<Recommendation>();
+		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
+			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
+			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
+			newRec.getRecList().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
+			newUserSongRec.add(newRec);
+			//CassandraQueryController.persist(newRec);
+		}
 
-		MapPredictions2Tracks(predictions);
+		/**
+		 * Create an RDD from recommendations and Save it in parallel fashion
+		 */
+		JavaRDD<Recommendation> rdd = sc.parallelize(newUserSongRec);
+		rdd.foreach(new VoidFunction<Recommendation>() {
+			@Override
+			public void call(Recommendation t) throws Exception {
+				CassandraQueryController.persist(t);
+			}
+		});
+		//javaFunctions(rdd).writerBuilder("play_cassandra", "recommendations", mapToRow(Recommendation.class)).saveToCassandra();
+		//System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector");
+		
 		
 		/*
 		 * Update Stats Table
@@ -225,43 +261,33 @@ public class SparkCollaborativeFiltering {
 		// MatrixFactorizationModel.load("myModelPath");
 	}
 	
-	/**
-	 * 
-	 * @param list
-	 * @param mail
-	 * @return
-	 */
-	public static int userIndex(List<User> list, String mail){
-		for(int i = 0; i < list.size() ; i++ ){
-			if(list.get(i).getEmail().equalsIgnoreCase( mail ))
-				return i;
-		}
-		/*
-		 * Error Case - Should never Happen!!
-		 */
-		logger.error(" Retrieving index for not existing User: "+ mail);
-		//TODO: CHECK THIS
-		return -1;
-		
-	}
 	
-	/**
-	 * 
-	 * @param list
-	 * @param trackTitle
-	 * @return
-	 */
-	public static int trackIndex(List<Track> list, String trackTitle){
-		for(int i = 0; i < list.size(); i++ ){
-			if(list.get(i).getTitle().equalsIgnoreCase( trackTitle ))
-				return i;
+	private static int trackID = 0;
+	private static int userID = 0;
+	
+	
+	private static Map<String, Integer>  generateUserMap(List<User> allusers){
+		Map<String , Integer> m = new HashMap<String , Integer>();
+		userID = 0;
+		
+		for(User u : allusers){
+			m.put(u.getEmail(), userID);
+			userID++;
 		}
-		/*
-		 * Error Case - Should never Happen!!
-		 */
-		logger.error(" Retrieving index for not existing Track: "+ trackTitle);
-		return -1;
+		return m;		
 	}
+
+	private static Map<String, Integer>  generateTrackMap(List<Track> alltracks){
+		Map<String, Integer> m = new HashMap<String, Integer>();
+		trackID = 0;
+		
+		for(Track t : alltracks){
+			m.put(t.getTitle(), trackID);
+			trackID++;
+		}
+		return m;
+	}
+
 	
 	/**
 	 * Method Mapping generated Recommendations to Tracks and Users 

@@ -284,7 +284,8 @@ public class CassandraQueryController {
 			System.out.println("\n Recommendation for : " + r.getEmail() + " record persisted using persistence unit -> cassandra_pu");
 		}
 		else{
-			r.getRecList().putAll(tmp.getRecList());
+			if (tmp.getRecList() != null)
+				r.getRecList().putAll(tmp.getRecList());
 			em.merge(r);
 			System.out.println("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
 		}
