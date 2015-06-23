@@ -52,9 +52,12 @@ public class SparkCollaborativeFiltering {
 				 */
 				//.set("spark.storage.memoryFraction", "0.1")
 				//spark-submit alternative: --driver-memory 2g
-				.set("spark.driver.memory", "7g")
-				.set("spark.executor.memory","4g")
-				.set("spark.driver.maxResultSize","7g")
+				/*
+				 * Does not make any difference if running on the same machine 
+				 */
+				//.set("spark.driver.memory", "3g")
+				.set("spark.executor.memory","7g")
+				.set("spark.driver.maxResultSize","4g")
 				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
 				//.setMaster("local[16]")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
