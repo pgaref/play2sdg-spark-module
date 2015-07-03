@@ -17,7 +17,7 @@
  	<property name="replcation.factor" value="1" />
  	<property name="kundera.ddl.auto.prepare" value="update" />
  	<!-- <property name="kundera.nodes" value="localhost"/> -->
- 	<property name="kundera.nodes" value="wombat26.doc.res.ic.ac.uk"/>
+ 	<property name="kundera.nodes" value="wombat26.doc.res.ic.ac.uk,wombat27.doc.res.ic.ac.uk.wombat28.doc.res.ic.ac.uk"/>
  	<property name="kundera.port" value="9160"/>
  	<property name="kundera.keyspace" value="play_cassandra"/>
  	<property name="kundera.dialect" value="cassandra"/>
@@ -25,7 +25,7 @@
  	<property name="kundera.cache.provider.class" value="com.impetus.kundera.cache.ehcache.EhCacheProvider"/>
  	<property name="kundera.cache.config.resource" value="/ehcache-test.xml"/>
  	<!-- Load Balancing Configuration-->
- 	<!--<property name="kundera.client.property" value="conf/META-INF/KunderaLoadConfig.xml" />--> 
+ 	<property name="kundera.client.property" value="KunderaLoadConfig.xml" /> 
  </properties>
 
  </persistence-unit>
