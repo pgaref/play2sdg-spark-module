@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.log4j.PropertyConfigurator;
+
 import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Recommendation;
@@ -23,7 +25,7 @@ public class TestCassandraQueries {
 	}
 	
 	public static void TestListSongs(){
-		List<Track> list = CassandraQueryController.listAllTracks();
+		List<Track> list = CassandraQueryController.listAllTracksWithPagination();
 		assert(list != null);
 		assert(list.size() != 0);
 		assert(list.get(0) != null);
@@ -87,16 +89,19 @@ public class TestCassandraQueries {
 		/*
 		 * TODO: Change to load Data just for the tests!
 		 */
+		PropertyConfigurator.configure("conf/META-INF/log4j.properties");
 		
-//		TestListUsers();
-//		TestListSongs();
-//		testListRecommendations();
-//		
-//		testAddRec();
+		TestListUsers();
+		TestListSongs();
+		testListRecommendations();
+		
+		for(int i = 0 ; i < 2000; i++)
+			testAddRec();
+		
 //		TestAddUserPlayList();
 		
-//		testStats();
-		testDeletePlayList();
+		testStats();
+//		testDeletePlayList();
 		
 	}
 
