@@ -5,12 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-import com.impetus.client.cassandra.common.CassandraConstants;
-
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -23,6 +17,11 @@ import main.java.uk.ac.imperial.lsds.models.Stats;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
+import com.impetus.client.cassandra.common.CassandraConstants;
+
 
 /**
  * User Controller for Apache Cassandra back-end
@@ -32,7 +31,7 @@ import main.java.uk.ac.imperial.lsds.models.User;
 
 public class CassandraQueryController {
 	
-	static Logger  logger = Logger.getLogger("main.java.uk.ac.imperial.lsds.utils.CassandraController");
+	static Logger  logger = Logger.getLogger(CassandraQueryController.class);
 	static EntityManagerFactory emf;
 	
 	static Counter songCounter = new Counter("tracks");
@@ -49,12 +48,14 @@ public class CassandraQueryController {
 		User tmp = em.find(User.class, user.getEmail());
 		if(tmp == null){
 			em.persist(user);
+			logger.debug("\n User: " + user.getEmail() + " record persisted using persistence unit -> cassandra_pu");
 			increment(userCounter);
 		}
-		else
+		else{
 			em.merge(user);
+			logger.debug("\n User: " + user.getEmail() + " record merged using persistence unit -> cassandra_pu");
+		}
 		em.close();
-		logger.debug("\n User: " + user.getEmail() + " record persisted using persistence unit -> cassandra_pu");
 	}
 
 	public static User findbyEmail(String email) {
@@ -166,23 +167,23 @@ public class CassandraQueryController {
 		List<Track> allTracks = new ArrayList<Track>();
 		
 		Query firstPage =em.createQuery("Select s from Track s", Track.class);
-		firstPage.setMaxResults(10000);
+		firstPage.setMaxResults(5000);
 		
 		@SuppressWarnings("unchecked")
 		List<Track> result = firstPage.getResultList();
 		logger.debug("\n ##############  Listing First Track page ############## \n ");
 		allTracks.addAll(result);
-		em.close();
+		
 		while(allTracks.size() < CassandraQueryController.getCounterValue("tracks") ){
 			em = getEm();
 			Query findQuery = em
-				.createNativeQuery("SELECT * FROM tracks WHERE token(key) > token('"+ allTracks.get(allTracks.size()-1).getTrack_id() +"') LIMIT 10000;", Track.class);
-			findQuery.setMaxResults(10000);
+				.createNativeQuery("SELECT * FROM tracks WHERE token(key) > token('"+ allTracks.get(allTracks.size()-1).getTrack_id() +"') LIMIT 5000;", Track.class);
+			findQuery.setMaxResults(5000);
 			@SuppressWarnings("unchecked")
 			List<Track> nextPageTracks = findQuery. getResultList();
 			allTracks.addAll(nextPageTracks);
 			logger.debug("\n ##############  Listing Next Track page, Current Size: "+ allTracks.size() +"  After TrackID: "+ allTracks.get(allTracks.size()-1).getTrack_id() +" ############## \n ");
-			em.close();
+
 		} 
 		
 		return allTracks;
@@ -221,9 +222,7 @@ public class CassandraQueryController {
 				logger.debug("Generic: " + userCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
 			}
 		}
-		em.close();
-		
-		
+
 	}
 	
 	public static void decrement(Counter counter) {
@@ -279,21 +278,26 @@ public class CassandraQueryController {
 	public static void persist(Recommendation r) {
 		EntityManager em = getEm();
 		Query findQuery = em.createNativeQuery("Select * from recommendations where email = '" +  r.getEmail() +"';", Recommendation.class);
-		findQuery.setMaxResults(1);
-		@SuppressWarnings("unchecked")
-		List<Recommendation> results = findQuery.getResultList();
-		Recommendation tmp =  ( ((results == null) || (results.size() ==0)) ? null :  results.get(0) );
-		if(tmp == null){
-			em.persist(r);
-			System.out.println("\n Recommendation for : " + r.getEmail() + " record persisted using persistence unit -> cassandra_pu");
+		findQuery.setMaxResults(1);	
+		try{
+			@SuppressWarnings("unchecked")
+			List<Recommendation> results = findQuery.getResultList();
+			Recommendation tmp =  ( ((results == null) || (results.size() ==0)) ? null :  results.get(0) );
+			if(tmp == null){
+				em.persist(r);
+				logger.debug("\n Recommendation for : " + r.getEmail() + " record persisted using persistence unit -> cassandra_pu");
+			}
+			else{
+				if (tmp.getRecList() != null)
+					r.getRecList().putAll(tmp.getRecList());
+				em.merge(r);
+				logger.debug("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
+			}
+		}catch(javax.persistence.PersistenceException ex){
+			logger.error("-> spark - PersistenceException");
+		}catch(org.apache.cassandra.db.marshal.MarshalException ex){
+			logger.error("-> spark - MarshalException");
 		}
-		else{
-			if (tmp.getRecList() != null)
-				r.getRecList().putAll(tmp.getRecList());
-			em.merge(r);
-			System.out.println("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
-		}
-		em.close();	
 	}
 	
 	public static List<Recommendation> listAllRecommendations(){
@@ -336,13 +340,12 @@ public class CassandraQueryController {
 		PlayList tmp = em.find(PlayList.class, p.getId());
 		if(tmp == null){
 			em.persist(p);
-			System.out.println("\n PlayList: " + p.getId() + " record persisted using persistence unit -> cassandra_pu");
+			logger.debug("\n PlayList: " + p.getId() + " record persisted using persistence unit -> cassandra_pu");
 		}
 		else{
 			em.merge(p);
-			System.out.println("\n PlayList: " + p.getId() + " record merged using persistence unit -> cassandra_pu");
+			logger.debug("\n PlayList: " + p.getId() + " record merged using persistence unit -> cassandra_pu");
 		}
-		em.close();
 		
 	}
 	
@@ -403,7 +406,7 @@ public class CassandraQueryController {
 		Stats tmp = em.find(Stats.class, s.getId());
 		if(tmp == null){
 			em.persist(s);
-			System.out.println("\n Recommendation for : " + s.getId() + " record persisted using persistence unit -> cassandra_pu");
+			logger.debug("\n Recommendation for : " + s.getId() + " record persisted using persistence unit -> cassandra_pu");
 		}
 		else{
 			/*
@@ -413,7 +416,7 @@ public class CassandraQueryController {
 			tmp.setTimestamp(s.getTimestamp());
 			tmp.getStatsMap().putAll(s.getStatsMap());
 			em.merge(tmp);
-			System.out.println("\n Recommendation for : " + tmp.getId() + " record merged using persistence unit -> cassandra_pu");
+			logger.debug("\n Recommendation for : " + tmp.getId() + " record merged using persistence unit -> cassandra_pu");
 		}
 		em.close();	
 	}
@@ -445,8 +448,7 @@ public class CassandraQueryController {
 	 * @return
 	 */
 	
-	private static EntityManager getEm() {
-		logger.setLevel(Level.INFO);	
+	private static EntityManager getEm() {	
 		if (emf == null) {
 			EntityManager em = getEmf().createEntityManager();
 			em.setProperty("cql.version", "3.0.0");
@@ -460,9 +462,9 @@ public class CassandraQueryController {
 	
 	
 	private static EntityManagerFactory getEmf() {
-		logger.setLevel(Level.INFO);	
+//		logger.setLevel(Level.WARN);
 		if (emf == null) {
-			Map propertyMap = new HashMap();
+			Map<String, String> propertyMap = new HashMap<String, String>();
 	        propertyMap.put(CassandraConstants.CQL_VERSION, CassandraConstants.CQL_VERSION_3_0);
 			emf = Persistence.createEntityManagerFactory("cassandra_pu", propertyMap);
 			logger.debug("\n emf"+ emf.toString());
@@ -473,5 +475,6 @@ public class CassandraQueryController {
 	public static void main(String[] args) {
 		System.out.println("Tacks Counter: "+ CassandraQueryController.getCounterValue("tracks"));
 		System.out.println("Looking for user pgaref : found =  "+ CassandraQueryController.findbyEmail("pgaref@example.com").toString());
+		
 	}
 }
