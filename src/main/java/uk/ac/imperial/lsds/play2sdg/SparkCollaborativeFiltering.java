@@ -1,39 +1,43 @@
 package main.java.uk.ac.imperial.lsds.play2sdg;
 
+
+import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
+
+import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
+import main.java.uk.ac.imperial.lsds.models.PlayList;
+import main.java.uk.ac.imperial.lsds.models.Recommendation;
+
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.mllib.recommendation.ALS;
+import org.apache.spark.mllib.recommendation.Rating;
+import org.apache.spark.storage.StorageLevel;
+
+import main.java.uk.ac.imperial.lsds.models.Stats;
+import main.java.uk.ac.imperial.lsds.models.Track;
+import main.java.uk.ac.imperial.lsds.models.User;
+
+import org.apache.spark.api.java.JavaDoubleRDD;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.SparkConf;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
-import main.java.uk.ac.imperial.lsds.io_handlers.LastFMDataParser;
-import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
-import main.java.uk.ac.imperial.lsds.models.PlayList;
-import main.java.uk.ac.imperial.lsds.models.Recommendation;
-import main.java.uk.ac.imperial.lsds.models.Stats;
-import main.java.uk.ac.imperial.lsds.models.Track;
-import main.java.uk.ac.imperial.lsds.models.User;
-
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaDoubleRDD;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction;
-import org.apache.spark.mllib.recommendation.ALS;
-import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
-import org.apache.spark.mllib.recommendation.Rating;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.spark.connector.writer.WriteConf;
-
 import scala.Tuple2;
-import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
+
+
 public class SparkCollaborativeFiltering {
 
-	private static Logger logger = LoggerFactory.getLogger(SparkCollaborativeFiltering.class);
+	static Logger  logger = Logger.getLogger(SparkCollaborativeFiltering.class);
 	
 	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
 	//private static final String dataset_path = "data/LastFM/lastfm_subset";
@@ -43,7 +47,16 @@ public class SparkCollaborativeFiltering {
 	private static Map<String, Integer> tracksMap;
 	private static List<Track> tracksList;
 	
+	
 	public static void main(String[] args) {
+		
+	    Logger.getLogger("org").setLevel(Level.WARN);
+	    Logger.getLogger("akka").setLevel(Level.WARN);
+	    //This is the root logger provided by log4j
+	    Logger rootLogger = Logger.getRootLogger();
+	    rootLogger.setLevel(Level.WARN);
+	    
+	    java.util.logging.Logger.getGlobal().setLevel(java.util.logging.Level.OFF);
 
 		long jobStarted = System.currentTimeMillis();
 		SparkConf conf = new SparkConf()
@@ -56,8 +69,8 @@ public class SparkCollaborativeFiltering {
 				 * Does not make any difference if running on the same machine 
 				 */
 				//.set("spark.driver.memory", "3g")
-				.set("spark.executor.memory","7g")
-				.set("spark.driver.maxResultSize","4g")
+				.set("spark.executor.memory","1g")
+				.set("spark.driver.maxResultSize","1g")
 				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
 				//.setMaster("local[16]")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
@@ -93,14 +106,14 @@ public class SparkCollaborativeFiltering {
 		logger.info("## Total Users Fetched # "+ usersMap.size() +" ##");
 		
 		
-		for(String u : usersMap.keySet())
-			System.out.println("U: "+ u);
+//		for(String u : usersMap.keySet())
+//			System.out.println("U: "+ u);
 		
 		
 		logger.info("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
 		
-		for(PlayList p : allplaylists)
-			System.out.println("P: "+ p);
+//		for(PlayList p : allplaylists)
+//			System.out.println("P: "+ p);
 		
 		
 		
@@ -140,7 +153,7 @@ public class SparkCollaborativeFiltering {
 						.parseInt(sarray[1]), Double.parseDouble(sarray[2]));
 			}
 		});
-
+		
 		// Build the recommendation model using ALS
 		int rank = 10;
 		int numIterations = 20;
@@ -198,7 +211,7 @@ public class SparkCollaborativeFiltering {
 			@Override
 			public void call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
 					throws Exception {
-				//System.out.println("Tupple: "+ v1.toString());
+				//System.out.println("Tupple: "+ v1.toString());	
 				logger.debug("Creating Recommendation-> user: "+v1._1()._1 + "\t track: " + v1._1()._2 + "\t score: "+v1._2() );
 				allusers = CassandraQueryController.listAllUsers();
 				Recommendation newRec = new Recommendation(allusers.get(v1._1()._1).getEmail());
@@ -226,6 +239,7 @@ public class SparkCollaborativeFiltering {
 		 * Create an RDD from recommendations and Save it in parallel fashion
 		 */
 		JavaRDD<Recommendation> rdd = sc.parallelize(newUserSongRec);
+		rdd.persist(StorageLevel.MEMORY_AND_DISK_SER());
 		rdd.foreach(new VoidFunction<Recommendation>() {
 			@Override
 			public void call(Recommendation t) throws Exception {
@@ -233,7 +247,7 @@ public class SparkCollaborativeFiltering {
 			}
 		});
 		//javaFunctions(rdd).writerBuilder("play_cassandra", "recommendations", mapToRow(Recommendation.class)).saveToCassandra();
-		//System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector");
+		
 		
 		
 		/*
@@ -244,6 +258,8 @@ public class SparkCollaborativeFiltering {
 		sparkJobStats.getStatsMap().put("Total Predictions", Double.parseDouble( ""+ predictions.count() ));
 		sparkJobStats.getStatsMap().put("Mean Squared Error",  MSE );
 		CassandraQueryController.persist(sparkJobStats);
+		
+		System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector- Job took: "+Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+""));
 		
 		/*
 		JavaRDD<Recommendation> recc = predictions.map(new Function<Tuple2<Tuple2<Integer, Integer>, Double>, Recommendation>() {
