@@ -25,6 +25,9 @@ public class MesosScaleTimer {
 	private static String appName;
 	private static Client client;
 	
+	private static long deployment_start;
+	private static long deployment_end;
+	
 	
 	public MesosScaleTimer(int instances, String marathon, String appName ){
 		MesosScaleTimer.instancesNo = instances;
@@ -34,30 +37,54 @@ public class MesosScaleTimer {
 
 	}
 	
-	public void checkRunning(ArrayList<String> instances){
+	public void checkRunning(ArrayList<String> instances) {
 		
-		try {
+		while(instances.size()!= instancesNo)
+			instances = this.getTasks();
+		
+		deployment_end = System.currentTimeMillis();
+		System.out.println("Deployment done ready after: "+ (deployment_end-deployment_start) +" ms");
+
+		long start = System.currentTimeMillis();
+		int validCount = 0;
+		while (validCount != instancesNo) {
 			for (String instance : instances) {
 				WebResource master = client
-						//.resource("http://wombat27.doc.res.ic.ac.uk:53431");
-						.resource("http://"+instance);
-				ClientResponse response = master.accept(MediaType.TEXT_HTML)
-						.get(ClientResponse.class);
+				// .resource("http://wombat27.doc.res.ic.ac.uk:53431");
+						.resource("http://" + instance);
+				try {
+					ClientResponse response = master
+							.accept(MediaType.TEXT_HTML).get(
+									ClientResponse.class);
 
-				if (response.getStatus() != 200) {
-					throw new RuntimeException("Failed : HTTP error code : "
-							+ response.getStatus());
+					if (response.getStatus() != 200) {
+						System.out.println("Failed : HTTP error code : "
+								+ response.getStatus());
+						validCount = 0;
+						break;
+						// throw new
+						// RuntimeException("Failed : HTTP error code : "
+						// + response.getStatus());
+					} else {
+						//System.out.println("Host (" +instance+") - OK !");
+						validCount++;
+					}
+				} catch (com.sun.jersey.api.client.ClientHandlerException ex) {
+					//System.out.println("Host (" +instance+") "+ " Connection problem:  "+ ex.getMessage());
+					validCount = 0;
+					break;
 				}
-
-				System.out.println("Got responce " + response);
+				// System.out.println("Got responce " + response);
 			}
-		} catch ( com.sun.jersey.api.client.ClientHandlerException ex) {
-			System.out.println("Connection problem:  " + ex.getMessage());
 		}
-		
+		long end = System.currentTimeMillis();
+		System.out.println("Instances Ready after : "+ (end-start) + " ms");
+
 	}
 	
 	public void scaleOut() {
+		
+		deployment_start = System.currentTimeMillis();
 	    
 		ClientConfig clientConfig = new DefaultClientConfig();              
 		clientConfig.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);     
@@ -84,7 +111,6 @@ public class MesosScaleTimer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 	
 	
@@ -106,7 +132,7 @@ public class MesosScaleTimer {
 //		System.out.println("Received: "+ json.toString());
 		try{
 			JSONArray app = json.getJSONArray(appName);
-			System.out.println("App Tasks: "+ app);	
+			//System.out.println("App Tasks: "+ app);	
 			for(int i =0; i <  app.length(); i ++){
 				JSONObject task  = app.getJSONObject(i);
 				
@@ -120,7 +146,7 @@ public class MesosScaleTimer {
 		}catch(org.json.JSONException e){
 			System.out.println("Application " + appName + " not found!");
 		}finally{
-			System.out.println("Done parsing json responce");
+			//System.out.println("Done parsing json responce");
 			return allinstances;
 		}
 		
@@ -128,15 +154,15 @@ public class MesosScaleTimer {
 	
 	
 	public static void main(String[] args) {
-		MesosScaleTimer timer = new MesosScaleTimer(2, "http://wombat30.doc.res.ic.ac.uk:8080", "play_isolated_2G");
 		
-		//timer.scaleOut();
+		long total_start = System.currentTimeMillis();
 		
+		MesosScaleTimer timer = new MesosScaleTimer(9, "http://wombat30.doc.res.ic.ac.uk:8080", "play_isolated_2G");
+		timer.scaleOut();
 		ArrayList<String> allinstances = timer.getTasks();
-		for(String instance: allinstances)
-			System.out.println("Running instance: "+ instance);
-		
 		timer.checkRunning(allinstances);
+		
+		System.out.println("Total job took: "+ (System.currentTimeMillis()-total_start) + " ms" );
 		
 	}
 
