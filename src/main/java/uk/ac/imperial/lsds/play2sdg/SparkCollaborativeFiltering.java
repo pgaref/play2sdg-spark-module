@@ -15,9 +15,10 @@ import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.Rating;
 import org.apache.spark.storage.StorageLevel;
 
-import main.java.uk.ac.imperial.lsds.models.Stats;
+import main.java.uk.ac.imperial.lsds.models.StatsTimeseries;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
+import main.java.uk.ac.imperial.lsds.utils.SystemStats;
 
 import org.apache.spark.api.java.JavaDoubleRDD;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -39,8 +40,12 @@ public class SparkCollaborativeFiltering {
 
 	static Logger  logger = Logger.getLogger(SparkCollaborativeFiltering.class);
 	
-	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	//private static final String dataset_path = "data/LastFM/lastfm_subset";
+	/**
+	 * Change for HDFS
+	 */
+	//private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
+	private static final String dataset_path = "/home/pg1712/workspace/play2sdg-spark-module/data";
+	
 	private static List<PlayList> allplaylists;
 	private static Map<String, Integer> usersMap;
 	private static List<User> allusers;
@@ -72,7 +77,7 @@ public class SparkCollaborativeFiltering {
 				.set("spark.executor.memory","1g")
 				.set("spark.driver.maxResultSize","1g")
 				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
-				//.setMaster("local[16]")
+				.setMaster("local[8]")
 				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
 				.setAppName("play2sdg Collaborative Filtering Job");
 		JavaSparkContext sc = new JavaSparkContext(conf);
@@ -246,18 +251,20 @@ public class SparkCollaborativeFiltering {
 				CassandraQueryController.persist(t);
 			}
 		});
-		//javaFunctions(rdd).writerBuilder("play_cassandra", "recommendations", mapToRow(Recommendation.class)).saveToCassandra();
-		
-		
 		
 		/*
-		 * Update Stats Table
-		 */
-		Stats sparkJobStats = new Stats("sparkCF");
-		sparkJobStats.getStatsMap().put("Job time(s)", Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+"") ); 
-		sparkJobStats.getStatsMap().put("Total Predictions", Double.parseDouble( ""+ predictions.count() ));
-		sparkJobStats.getStatsMap().put("Mean Squared Error",  MSE );
+		 * Update Stats Table 
+ 		 */
+		SystemStats perf  = new SystemStats();
+		StatsTimeseries sparkJobStats = new StatsTimeseries("sparkCF");
+		sparkJobStats.getStatsMap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
+		sparkJobStats.getStatsMap().put("Total Predictions", predictions.count()+"" );
+		sparkJobStats.getStatsMap().put("Mean Squared Error",  MSE+"" );
+		
+		//-> Added Performance Data
+		sparkJobStats.persistData(perf);
 		CassandraQueryController.persist(sparkJobStats);
+		
 		
 		System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector- Job took: "+Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+""));
 		
