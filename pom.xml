@@ -87,6 +87,14 @@
             <version>2.9</version>
     </dependency>
 	
+	<!-- Cross platform Operating System Information -->
+	<dependency>
+		<groupId>com.github.dblock</groupId>
+		<artifactId>oshi-core</artifactId>
+		<version>1.3</version>
+	</dependency>
+	
+	
 	<!-- Cassandra Core 
     <dependency>
             <groupId>com.datastax.cassandra</groupId>
