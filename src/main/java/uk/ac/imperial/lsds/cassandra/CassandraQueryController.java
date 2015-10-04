@@ -282,22 +282,22 @@ public class CassandraQueryController {
 	 */
 	public static void persist(Recommendation r) {
 		EntityManager em = getEntintyManagerCustom();
-		Query findQuery = em.createNativeQuery("Select * from recommendations where email = '" +  r.getEmail() +"';", Recommendation.class);
-		findQuery.setMaxResults(1);	
+		//Query findQuery = em.createNativeQuery("Select * from recommendations where email = '" +  r.getEmail() +"';", Recommendation.class);
+		//findQuery.setMaxResults(1);	
 		try{
-			@SuppressWarnings("unchecked")
-			List<Recommendation> results = findQuery.getResultList();
-			Recommendation tmp =  ( ((results == null) || (results.size() ==0)) ? null :  results.get(0) );
-			if(tmp == null){
+//			@SuppressWarnings("unchecked")
+//			List<Recommendation> results = findQuery.getResultList();
+//			Recommendation tmp =  ( ((results == null) || (results.size() ==0)) ? null :  results.get(0) );
+//			if(tmp == null){
 				em.persist(r);
 				logger.debug("\n Recommendation for : " + r.getEmail() + " record persisted using persistence unit -> cassandra_pu");
-			}
-			else{
-				if (tmp.getRecList() != null)
-					r.getRecList().putAll(tmp.getRecList());
-				em.merge(r);
-				logger.debug("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
-			}
+//			}
+//			else{
+//				if (tmp.getRecList() != null)
+//					r.getRecList().putAll(tmp.getRecList());
+//				em.merge(r);
+//				logger.debug("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
+//			}
 		}catch(javax.persistence.PersistenceException ex){
 			logger.error("-> cassandra - PersistenceException");
 		}catch(org.apache.cassandra.db.marshal.MarshalException ex){
@@ -486,27 +486,8 @@ public class CassandraQueryController {
 	 */
 	
 	private static EntityManager getEntintyManagerCustom() {	
-		if (emf == null) {
-			EntityManager em = getEM().createEntityManager();
-			em.setProperty("cql.version", "3.0.0");
-			
-			Map<String, Client> clientMap = (Map<String, Client>) em
-					.getDelegate();
-			ThriftClient tc = (ThriftClient) clientMap.get("cassandra_pu");
-			tc.setCqlVersion(CassandraConstants.CQL_VERSION_3_0);
-			//tc.setConsistencyLevel(ConsistencyLevel.ONE);
-			
-			logger.debug("\n emf"+ emf.toString());
-		}
-		emf =  getEM();
+		emf = CassandraQueryController.getEM();
 		EntityManager em = emf.createEntityManager();
-		em.setProperty("cql.version", "3.0.0");
-		
-		Map<String, Client> clientMap = (Map<String, Client>) em
-				.getDelegate();
-		ThriftClient tc = (ThriftClient) clientMap.get("cassandra_pu");
-		tc.setCqlVersion(CassandraConstants.CQL_VERSION_3_0);
-		//tc.setConsistencyLevel(ConsistencyLevel.ONE);
 		
 		return em;
 	}
