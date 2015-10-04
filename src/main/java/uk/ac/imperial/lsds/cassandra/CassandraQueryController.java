@@ -264,8 +264,7 @@ public class CassandraQueryController {
 	
 	public static int getCounterValue(String id){
 		EntityManager em = getEntintyManagerCustom();
-		Query findQuery = em.createNativeQuery("Select * from counters where key='"+id+"';", Counter.class);
-		Counter tmp = (Counter) findQuery.getResultList().get(0);
+		Counter tmp = em.find(Counter.class, id);
 		if(tmp == null){
 			logger.debug("\n Counter: "+ id +" NOT FOUND!!!");
 			return 0;
@@ -361,7 +360,7 @@ public class CassandraQueryController {
 	
 	public static List<PlayList> listAllPlaylists(){
 		EntityManager em = getEntintyManagerCustom();
-		Query findQuery = em.createNativeQuery("Select p from PlayList p", PlayList.class);
+		Query findQuery = em.createQuery("Select p from PlayList p", PlayList.class);
 		findQuery.setMaxResults(Integer.MAX_VALUE);
 		List<PlayList> allPlaylists= findQuery.getResultList();
 		em.close();

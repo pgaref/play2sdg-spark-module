@@ -43,8 +43,8 @@ public class SparkCollaborativeFiltering {
 	/**
 	 * Change for HDFS
 	 */
-	//private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train";
-	private static final String dataset_path = "/home/pg1712/play_colocated_files";
+	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-data";
+	//private static final String dataset_path = "/spark-data";
 	
 	private static List<PlayList> allplaylists;
 	private static Map<String, Integer> usersMap;
