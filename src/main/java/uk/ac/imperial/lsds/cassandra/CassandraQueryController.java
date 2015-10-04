@@ -264,7 +264,8 @@ public class CassandraQueryController {
 	
 	public static int getCounterValue(String id){
 		EntityManager em = getEntintyManagerCustom();
-		Counter tmp = em.find(Counter.class, id);
+		Query findQuery = em.createNativeQuery("Select * from counters where key='"+id+"';", Counter.class);
+		Counter tmp = (Counter) findQuery.getResultList().get(0);
 		if(tmp == null){
 			logger.debug("\n Counter: "+ id +" NOT FOUND!!!");
 			return 0;
@@ -299,13 +300,13 @@ public class CassandraQueryController {
 				logger.debug("\n Recommendation for : " + r.getEmail() + " record merged using persistence unit -> cassandra_pu");
 			}
 		}catch(javax.persistence.PersistenceException ex){
-			logger.error("-> spark - PersistenceException");
+			logger.error("-> cassandra - PersistenceException");
 		}catch(org.apache.cassandra.db.marshal.MarshalException ex){
-			logger.error("-> spark - MarshalException");
+			logger.error("-> cassandra - MarshalException");
 		}catch(com.impetus.kundera.KunderaException ex){
 			logger.error("-> cassandra - WriteTimeout");
 		}catch(Exception ex){
-			logger.error("-> Other - Exception: "+ ex.getClass());
+			logger.error("-> cassandra - Exception: "+ ex.getClass());
 		}
 	}
 	
@@ -360,7 +361,7 @@ public class CassandraQueryController {
 	
 	public static List<PlayList> listAllPlaylists(){
 		EntityManager em = getEntintyManagerCustom();
-		Query findQuery = em.createQuery("Select p from PlayList p", PlayList.class);
+		Query findQuery = em.createNativeQuery("Select p from PlayList p", PlayList.class);
 		findQuery.setMaxResults(Integer.MAX_VALUE);
 		List<PlayList> allPlaylists= findQuery.getResultList();
 		em.close();
