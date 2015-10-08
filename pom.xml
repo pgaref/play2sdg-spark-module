@@ -9,6 +9,25 @@
     	<id>cloudera-repo-releases</id>
     	<url>https://repository.cloudera.com/artifactory/repo/</url>
   	</repository>
+  	
+  	<!-- Kundera repositories -->
+  	<repository>
+    	<id>sonatype-nexus</id>
+    	<name>Kundera Public Repository</name>
+    	<url>https://oss.sonatype.org/content/repositories/releases</url>
+    	<releases>
+    	<enabled>true</enabled>
+    	</releases>
+    	<snapshots>
+    	<enabled>false</enabled>
+    	</snapshots>
+ 	</repository>
+ 	<repository>
+   		<id>riptano</id>
+   		<name>riptano</name>
+   		<url>http://mvn.riptano.com/content/repositories/public</url>
+	</repository>
+  	
   </repositories>
   
   <dependencies>
@@ -76,16 +95,34 @@
     </dependency>
     
     <dependency>
+		<groupId>com.datastax.cassandra</groupId>
+		<artifactId>cassandra-driver-core</artifactId>
+		<version>2.1.8</version>
+	</dependency>
+    
+    <dependency>
+		<groupId>com.datastax.cassandra</groupId>
+		<artifactId>cassandra-driver-mapping</artifactId>
+		<version>2.1.8</version>
+	</dependency>
+    
+    
+    <dependency>
     	<groupId>org.apache.hadoop</groupId>
     	<artifactId>hadoop-client</artifactId>
     	<version>2.0.0-cdh4.0.0</version>
 	</dependency>
     
     <dependency>
-            <groupId>com.impetus.client</groupId>
-            <artifactId>kundera-cassandra</artifactId>
-            <version>2.9</version>
-    </dependency>
+   		<groupId>com.impetus.kundera.core</groupId>
+   		<artifactId>kundera-core</artifactId>
+   		<version>3.1</version>
+ 	</dependency>
+ 	<dependency>
+   		<groupId>com.impetus.kundera.client</groupId>
+   		<artifactId>kundera-cassandra</artifactId>
+   		<version>3.1</version>
+ 	</dependency>
 	
 	<!-- Cross platform Operating System Information -->
 	<dependency>
