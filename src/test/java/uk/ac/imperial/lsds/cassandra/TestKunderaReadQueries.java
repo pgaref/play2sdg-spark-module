@@ -8,7 +8,7 @@ import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
-public class TestCassandraReadQueries {
+public class TestKunderaReadQueries {
 
 	private static Long testGetAllTracks() {
 		long start = System.currentTimeMillis();
