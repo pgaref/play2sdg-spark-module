@@ -7,11 +7,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import main.java.uk.ac.imperial.lsds.dx_models.User;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
-import main.java.uk.ac.imperial.lsds.models.User;
 
 public class UserFileParser {
 
@@ -127,8 +126,6 @@ public class UserFileParser {
 		}
 		return users;
 		
-		
-		
 	}
 
 	
@@ -139,19 +136,5 @@ public class UserFileParser {
 			return ParseFSUsers();
 	}
 	
-	
-	
-	public static void main(String[] args) {
-		UserFileParser userFileParser = new UserFileParser("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/users.txt");
-		List<User> usersFromFile = userFileParser.ParseUsers(); 
-
-//ALTER KEYSPACE play_cassandra WITH REPLICATION =   { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
-//		CassandraQueryController.UpdateKeyspaceRF("play_cassandra", 3);
-		for(User u : usersFromFile){
-			System.out.println("\n Read user: "+ u);
-			CassandraQueryController.persist(u);
-			System.out.println("Persisted ...");
-		}
-	}
 
 }

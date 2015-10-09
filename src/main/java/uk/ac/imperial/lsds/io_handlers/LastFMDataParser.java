@@ -7,17 +7,12 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
-import main.java.uk.ac.imperial.lsds.models.PlayList;
-import main.java.uk.ac.imperial.lsds.models.Recommendation;
-import main.java.uk.ac.imperial.lsds.models.Track;
-import main.java.uk.ac.imperial.lsds.models.User;
+import main.java.uk.ac.imperial.lsds.dx_models.Track;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
@@ -112,20 +107,20 @@ public class LastFMDataParser {
 		
 	}
 	
-	public static Track dumpTrack(JSONObject trackjson, boolean perist){
+	public static Track dumpTrack(JSONObject trackjson){
 		logger.debug("Creating Track "+ trackjson.get("track_id"));
 		Track t  = new Track((String)trackjson.get("track_id"), (String)trackjson.get("title"), (String)trackjson.get("artist"), (String)trackjson.get("timestamp"));
 		logger.debug("Sucessfuly created "+ trackjson.get("track_id"));
-		if(perist){
-			CassandraQueryController.persist(t);
-			logger.debug("Sucessfuly persisted "+ trackjson.get("track_id") + " to Cassandra");
-		}
+//		if(perist){
+//			CassandraQueryController.persist(t);
+//			logger.debug("Sucessfuly persisted "+ trackjson.get("track_id") + " to Cassandra");
+//		}
 		return t;
 	}
 	
 
 		  
-	public static void JsonReadTracksFromFile(File f, boolean persist){
+	public static void JsonReadTracksFromFile(File f){
         
 		JSONParser parser = new JSONParser();
     	
@@ -150,7 +145,7 @@ public class LastFMDataParser {
 			//Iterator iter = json.entrySet().iterator();
 			logger.debug("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
 			//Add track to List and Optionally save track to Cassandra Back-end!
-			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
+			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject));
 			logger.debug(" ---> TacksList size: "+spotifytracks.size() );
 			
 //			while (iter.hasNext()) {
@@ -164,7 +159,7 @@ public class LastFMDataParser {
         
 	}
 	
-	public static void JsonReadTracksFromHDFS(Path p, boolean persist){
+	public static void JsonReadTracksFromHDFS(Path p){
         
 		JSONParser parser = new JSONParser();
     	
@@ -193,7 +188,7 @@ public class LastFMDataParser {
 			//Iterator iter = json.entrySet().iterator();
 			logger.info("== Creating new Track: " +jsonObject.get("track_id") +  " ==");
 			//Add track to List and Optionally save track to Cassandra Back-end!
-			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject,persist));
+			spotifytracks.add(LastFMDataParser.dumpTrack(jsonObject));
 			logger.info(" ---> TacksList size: "+spotifytracks.size() );
             br.close();                         
         } catch (BlockMissingException e) {
@@ -213,18 +208,18 @@ public class LastFMDataParser {
 		}
 	}
 
-	public static List<Track> parseDataSet(boolean writeToCassandra){
+	public List<Track> parseDataSet(){
 
 		if(!isHDFS){
 			for(File f : allFiles){
 				logger.debug("## fs File: " + f);
-				JsonReadTracksFromFile(f, writeToCassandra);
+				JsonReadTracksFromFile(f);
 			}
 		}
 		else{
 			for(Path p : HDFSFileBrowser.getPaths()){
 				logger.debug("## hdfs File: " + p.getName());
-				JsonReadTracksFromHDFS(p, writeToCassandra );
+				JsonReadTracksFromHDFS(p);
 			}
 			
 		}
@@ -251,14 +246,14 @@ public class LastFMDataParser {
 	 * @param path the path to set
 	 */
 	public void setPath(String path) {
-		this.path = path;
+		LastFMDataParser.path = path;
 	}
 
 	/**
 	 * @param subdirs the subdirs to set
 	 */
 	public void setSubdirs(String[] subdirs) {
-		this.subdirs = subdirs;
+		LastFMDataParser.subdirs = subdirs;
 	}
 
 	/*
@@ -274,31 +269,31 @@ public class LastFMDataParser {
 
 	
 	
-	public static void main(String[] args) {
-		
-		logger.setLevel(Level.DEBUG);
-		
-		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train");
-		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
-		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
-		
-		
-		List<Track> tracksList = parser.parseDataSet(true);
-		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
-		
-		for(Track t : tracksList ){
-			System.out.println ( " Track index: "+ tracksList.indexOf(t)  + " with Title "+ t.getTitle() );
-			break;
-		}
-		
-		User u = CassandraQueryController.findbyEmail("pgaref@example.com");
-		PlayList plist = new PlayList("pgaref@example.com", "LoungeMusic");
-		plist.addRatingSong(tracksList.get(0));
-		CassandraQueryController.persist(plist);
-		
-		Recommendation rtest = new Recommendation("pgaref@example.com");
-		rtest.addRecommendation(tracksList.get(1).getTitle(), 2.0);
-		CassandraQueryController.persist(rtest);
-		
-	}
+//	public static void main(String[] args) {
+//		
+//		logger.setLevel(Level.DEBUG);
+//		
+//		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train");
+//		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+//		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
+//		
+//		
+//		List<Track> tracksList = parser.parseDataSet(true);
+//		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
+//		
+//		for(Track t : tracksList ){
+//			System.out.println ( " Track index: "+ tracksList.indexOf(t)  + " with Title "+ t.getTitle() );
+//			break;
+//		}
+//		
+//		User u = CassandraQueryController.findbyEmail("pgaref@example.com");
+//		PlayList plist = new PlayList("pgaref@example.com", "LoungeMusic");
+//		plist.addRatingSong(tracksList.get(0));
+//		CassandraQueryController.persist(plist);
+//		
+//		Recommendation rtest = new Recommendation("pgaref@example.com");
+//		rtest.addRecommendation(tracksList.get(1).getTitle(), 2.0);
+//		CassandraQueryController.persist(rtest);
+//		
+//	}
 }
