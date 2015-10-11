@@ -300,8 +300,6 @@ public class CassandraQueryController {
 //			}
 		}catch(javax.persistence.PersistenceException ex){
 			logger.error("-> cassandra - PersistenceException");
-		}catch(org.apache.cassandra.db.marshal.MarshalException ex){
-			logger.error("-> cassandra - MarshalException");
 		}catch(com.impetus.kundera.KunderaException ex){
 			logger.error("-> cassandra - WriteTimeout");
 		}catch(Exception ex){
@@ -498,6 +496,7 @@ public class CassandraQueryController {
 		if (emf == null) {
 			Map<String, String> propertyMap = new HashMap<String, String>();
 	        propertyMap.put(CassandraConstants.CQL_VERSION, CassandraConstants.CQL_VERSION_3_0);
+	        propertyMap.put("kundera.batch.size", "5");
 			emf = Persistence.createEntityManagerFactory("cassandra_pu", propertyMap);
 			logger.debug("\n emf"+ emf.toString());
 		}
