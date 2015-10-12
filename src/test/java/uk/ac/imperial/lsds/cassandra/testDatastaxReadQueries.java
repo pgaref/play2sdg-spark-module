@@ -66,7 +66,7 @@ public class testDatastaxReadQueries {
 		
 		long start = System.currentTimeMillis();
 		//Select select = QueryBuilder.select().all().from("play_cassandra", "users");
-		List<User> results = dx.listAllUsers();
+		List<User> results = dx.getAllUsers();
 		
 		long end = System.currentTimeMillis();
 		// System.out.println("Got All users: " + results.all().size()
@@ -102,7 +102,7 @@ public class testDatastaxReadQueries {
 
 		//Select select = QueryBuilder.select().all().from("play_cassandra", "users");
 		try {
-			List<User> results = dx.listAllUsersAsync();
+			List<User> results = dx.getAllUsersAsync();
 		} catch (InterruptedException | ExecutionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -127,8 +127,29 @@ public class testDatastaxReadQueries {
 	}
 
 	
+/*
+ * pgaref Custom Long Comparator for debuggin purposes
+ * 
+ */
+	static class LongComparator implements Comparator<Long>{
+	     public int compare(Long l1, Long l2)
+	     {
+	    	 if(l1 == null ){
+	    		 System.err.println("Should never happen!! l1");
+	    		 return -1;
+	    	 }
+	    	 else if(l2 == null){
+	    		 System.err.println("Should never happen!! l2");
+	    		 return 1;
+	    	 }
+	    	 else
+	    		 return l1.compareTo(l2);
+	     }
+	 }
+	
+	
 	public static void main(String[] args) {
-		final testDatastaxReadQueries bench = new testDatastaxReadQueries("146.179.131.141");
+		final testDatastaxReadQueries bench = new testDatastaxReadQueries("wombat11.doc.res.ic.ac.uk");
 		
 		ExecutorService executor = Executors.newFixedThreadPool(8);
 		long experimentStart = System.currentTimeMillis();
@@ -159,9 +180,6 @@ public class testDatastaxReadQueries {
 		}
 		long experimentEnd = System.currentTimeMillis();
 		
-		
-		
-		
 		executor.shutdownNow();
 		while(!executor.isTerminated()){
 			System.out.println("Waiting for termination");
@@ -182,21 +200,5 @@ public class testDatastaxReadQueries {
 
 	}
 	
-	static class LongComparator implements Comparator<Long>
-	 {
-	     public int compare(Long l1, Long l2)
-	     {
-	    	 if(l1 == null ){
-	    		 System.err.println("Should never happen!! l1");
-	    		 return -1;
-	    	 }
-	    	 else if(l2 == null){
-	    		 System.err.println("Should never happen!! l2");
-	    		 return 1;
-	    	 }
-	    	 else
-	    		 return l1.compareTo(l2);
-	     }
-	 }
 
 }
