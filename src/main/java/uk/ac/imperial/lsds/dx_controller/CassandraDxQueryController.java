@@ -148,6 +148,11 @@ public class CassandraDxQueryController {
 		caccessor.incrementCounter(counter.getId());
 	}
 	
+	public void incrementByValue(Counter counter, long val){
+		CounterAccessorI caccessor = manager.createAccessor(CounterAccessorI.class);
+		caccessor.increaseCounterByValue(counter.getId(), val);
+	}
+	
 	public void decrement(Counter counter) {
 		CounterAccessorI caccessor = manager.createAccessor(CounterAccessorI.class);
 		caccessor.decrementCounter(counter.getId());
@@ -296,6 +301,9 @@ public class CassandraDxQueryController {
 		dx.decrement(userCount);
 		cval = dx.getCounterValue("user");
 		System.out.println("After decr Cval = "+cval);
+		dx.incrementByValue(userCount,10007);
+		cval = dx.getCounterValue("user");
+		System.out.println("After inByVal Cval = "+cval);
 				
 		cm.disconnect();
 		System.out.println("Cluster Manager disconnected! ");

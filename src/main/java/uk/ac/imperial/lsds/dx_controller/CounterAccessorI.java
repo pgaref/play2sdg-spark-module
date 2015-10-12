@@ -28,6 +28,9 @@ public interface CounterAccessorI {
 	@Query("UPDATE play_cassandra.counters SET counter = counter - 1 WHERE key = :key")
 	public ResultSet decrementCounter(@Param("key") String key);
 	
+	@Query("UPDATE play_cassandra.counters SET counter = counter + :value WHERE key = :key")
+	public ResultSet increaseCounterByValue(@Param("key") String key, @Param("value") long value);
+	
     @Query("SELECT * FROM play_cassandra.counters")
     public Result<Counter> getAll();
 
