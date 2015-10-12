@@ -42,12 +42,15 @@ public class PrepareData {
 		playlists = this.preparePlayLists(20);
 	}
 	
-	public PrepareData(String userpath, String datapath, Session clusterSession) {
+	public PrepareData(String userpath, String datapath, Session clusterSession, boolean persist) {
 		queryController = new CassandraDxQueryController(clusterSession);
 		dataset_path = datapath;
 		userdata_path = userpath;
 		users = this.prepareUsers();
-		tracks = this.prepareTracks();
+		if(!persist)
+			tracks = this.prepareTracks();
+		else
+			this.persistTracks();
 		playlists = this.preparePlayLists(20);
 	}
 	
@@ -66,16 +69,33 @@ public class PrepareData {
 	private List<Track> prepareTracks(){
 		LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		List<Track> tracks = parser.parseDataSet();
+		/*List<Track> tracks = parser.parseDataSet();
 		for(Track t : tracks)
 			queryController.persist(t);
+		*/
 		logger.debug("Sucessfully persisted #"+ tracks.size() + "# Tracks" );
 		return tracks;
+	}
+	
+	private int persistTracks(){
+		LastFMDataParser parser = new LastFMDataParser(dataset_path);
+		int tracksSize = parser.persitDataSet(queryController);
+		/*List<Track> tracks = parser.parseDataSet();
+		for(Track t : tracks)
+			queryController.persist(t);
+		*/
+		logger.debug("Sucessfully persisted #"+ tracksSize + "# Tracks" );
+		return tracksSize;
 		
 	}
 	
 	private List<PlayList> preparePlayLists(int NumOfTracks){
 		List<PlayList> plists = new ArrayList<PlayList>();
 		logger.debug("Generating random PlayList Data! ### ");
+		
+		if(this.tracks == null)
+			this.tracks = queryController.getTracksPage(10000);
+		
 		for(User u : this.users){
 			PlayList plist = new PlayList(u.getEmail(), "EveyDayMusic");
 			

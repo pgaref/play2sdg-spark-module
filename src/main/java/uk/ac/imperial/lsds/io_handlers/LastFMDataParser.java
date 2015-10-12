@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import main.java.uk.ac.imperial.lsds.dx_controller.CassandraDxQueryController;
 import main.java.uk.ac.imperial.lsds.dx_models.Track;
 
 import org.apache.hadoop.fs.Path;
@@ -20,6 +21,7 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
@@ -104,12 +106,19 @@ public class LastFMDataParser {
 		assert( trackjson.get("artist") != null);
 		assert( trackjson.get("title") != null);
 		assert( trackjson.get("timestamp") != null);
+		assert( trackjson.get("tags") != null);
 		
 	}
 	
 	public static Track dumpTrack(JSONObject trackjson){
 		logger.debug("Creating Track "+ trackjson.get("track_id"));
 		Track t  = new Track((String)trackjson.get("track_id"), (String)trackjson.get("title"), (String)trackjson.get("artist"), (String)trackjson.get("timestamp"));
+		JSONArray tags = (JSONArray)  trackjson.get("tags");
+		JSONArray similars = (JSONArray)  trackjson.get("similars");
+		for(Object tag : tags)
+			t.getTags().add(tag.toString());
+		for(Object similar : similars)
+			t.getSimilars().add(similar.toString());	
 		logger.debug("Sucessfuly created "+ trackjson.get("track_id"));
 //		if(perist){
 //			CassandraQueryController.persist(t);
@@ -117,8 +126,37 @@ public class LastFMDataParser {
 //		}
 		return t;
 	}
-	
 
+	public static void JsonPersistTracksFromFile(File f,CassandraDxQueryController queryController) {
+
+		JSONParser parser = new JSONParser();
+
+		ContainerFactory containerFactory = new ContainerFactory() {
+			public List creatArrayContainer() {
+				return new LinkedList();
+			}
+			public Map createObjectContainer() {
+				return new LinkedHashMap();
+			}
+		};
+		try {
+			Object obj = parser.parse(new FileReader(f));
+			JSONObject jsonObject = (JSONObject) obj;
+			LastFMDataParser.checkTrackJsonFields(jsonObject);
+
+			Map json = (Map) parser.parse(jsonObject.toJSONString(),
+					containerFactory);
+			// Iterator iter = json.entrySet().iterator();
+			logger.debug("== Creating new Track: " + jsonObject.get("track_id")
+					+ " ==");
+			// Add track to List and Optionally save track to Cassandra
+			// Back-end!
+			queryController.persist(LastFMDataParser.dumpTrack(jsonObject));
+			logger.debug(" ---> Successfully Persisted track");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 		  
 	public static void JsonReadTracksFromFile(File f){
         
@@ -207,9 +245,8 @@ public class LastFMDataParser {
 			}
 		}
 	}
-
+	
 	public List<Track> parseDataSet(){
-
 		if(!isHDFS){
 			for(File f : allFiles){
 				logger.debug("## fs File: " + f);
@@ -225,6 +262,26 @@ public class LastFMDataParser {
 		}
 		logger.info(" ---> TacksList TOTAL size: "+spotifytracks.size() );
 		return spotifytracks;
+	}
+
+	public int persitDataSet(CassandraDxQueryController queryController){
+		int count =0;
+		if(!isHDFS){
+			for(File f : allFiles){
+				logger.debug("## fs File: " + f);
+				JsonPersistTracksFromFile(f,queryController);
+				count++;
+			}
+		}
+//		else{
+//			for(Path p : HDFSFileBrowser.getPaths()){
+//				logger.debug("## hdfs File: " + p.getName());
+//				JsonReadTracksFromHDFS(p);
+//			}
+//			
+//		}
+		logger.info(" ---> TacksList TOTAL size: "+spotifytracks.size() );
+		return count;
 		
 	}
 
@@ -269,23 +326,23 @@ public class LastFMDataParser {
 
 	
 	
-//	public static void main(String[] args) {
-//		
-//		logger.setLevel(Level.DEBUG);
-//		
-//		LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train");
-//		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
-//		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
-//		
-//		
-//		List<Track> tracksList = parser.parseDataSet(true);
-//		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
-//		
+	public static void main(String[] args) {
+		
+		logger.setLevel(Level.DEBUG);
+		
+		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_train");
+		LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
+		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_train");
+		
+		
+		List<Track> tracksList = parser.parseDataSet();
+		logger.debug("Sucessfully dumped #"+ tracksList.size() + "# Tracks" );
+		
 //		for(Track t : tracksList ){
 //			System.out.println ( " Track index: "+ tracksList.indexOf(t)  + " with Title "+ t.getTitle() );
 //			break;
 //		}
-//		
+		
 //		User u = CassandraQueryController.findbyEmail("pgaref@example.com");
 //		PlayList plist = new PlayList("pgaref@example.com", "LoungeMusic");
 //		plist.addRatingSong(tracksList.get(0));
@@ -294,6 +351,6 @@ public class LastFMDataParser {
 //		Recommendation rtest = new Recommendation("pgaref@example.com");
 //		rtest.addRecommendation(tracksList.get(1).getTitle(), 2.0);
 //		CassandraQueryController.persist(rtest);
-//		
-//	}
+		
+	}
 }
