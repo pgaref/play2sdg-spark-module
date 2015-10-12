@@ -1,3 +1,10 @@
+/**
+ * Accessor Interface Implementing Datastax Object Mapping
+ * Specific interface for Counter class
+ * NOTE: Counter Objects cannot be set, just incremented and decremented
+ * @author pgaref
+ *
+ */
 package main.java.uk.ac.imperial.lsds.dx_models;
 
 import com.datastax.driver.mapping.annotations.Column;
@@ -14,7 +21,7 @@ public class Counter{
 	private String id;
 	
 	@Column(name = "counter")
-	private int counter;
+	private long counter;
 	
 	public Counter() { 	this.counter=0; }
 	
@@ -43,7 +50,7 @@ public class Counter{
 	/**
 	 * @return the counter
 	 */
-	public int getCounter()
+	public long getCounter()
 	{
 	    return counter;
 	}
@@ -52,7 +59,7 @@ public class Counter{
 	 * @param counter
 	 *  the counter to set
 	 */
-	public void setCounter(int counter)
+	public void setCounter(long counter)
 	{
 	    this.counter = counter;
 	}
@@ -71,5 +78,10 @@ public class Counter{
 		return Objects.hashCode(id);
 	}
 	
+	@Override
+	public String toString(){
+		return "\n--------------------------------------------------"
+				+ "\nCounter: "+this.id + "\nValue:"+this.counter;
+	}
 
 }

@@ -128,10 +128,10 @@ public class Track{
 	@Override
 	public String toString(){
 		return "\n-------------------- Track -----------------------------"
-				+ "\n track_id: " + this.track_id
-				+ "\n artist: "+ this.artist
-				+ "\n title: " + this.title
-				+ "\n releaseDate: "+ this.releaseDate
+				+ "\n\t track_id: " + this.track_id
+				+ "\n\t artist: "+ this.artist
+				+ "\n\t title: " + this.title
+				+ "\n\t releaseDate: "+ this.releaseDate
 				;
 	}
 

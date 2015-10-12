@@ -120,9 +120,9 @@ public class User{
 	
 	public String toString() {
 		return "\n--------------------------------------------------"
-				+ "\nuserEmail: " + this.getEmail() + "\nusername: "+ this.getUsername()
-				+ "\nfirstName:" + this.getFistname() + "\nlastName: " + this.getLastname()
-				+ "\npass: " + this.password;
+				+ "\n\t userEmail: " + this.getEmail() + "\nusername: "+ this.getUsername()
+				+ "\n\t firstName:" + this.getFistname() + "\nlastName: " + this.getLastname()
+				+ "\n\t pass: " + this.password;
 	}
 
 	/**
