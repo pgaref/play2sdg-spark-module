@@ -49,7 +49,7 @@ public class SparkCollaborativeFiltering {
 	private static Map<String, Integer> usersMap;
 	private static List<User> allusers;
 	private static Map<String, Integer> tracksMap;
-	private static List<Track> tracksList = new ArrayList<Track>(839122);
+	private static List<Track> tracksList;
 	private static ClusterManager clusterManager = new ClusterManager("play_cassandra", 1, "155.198.198.12");
 	private static CassandraDxQueryController dxController = new CassandraDxQueryController(clusterManager.getSession());
 	
