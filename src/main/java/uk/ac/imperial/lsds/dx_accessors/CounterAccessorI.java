@@ -4,7 +4,7 @@
  * @author pgaref
  *
  */
-package main.java.uk.ac.imperial.lsds.dx_controller;
+package main.java.uk.ac.imperial.lsds.dx_accessors;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.mapping.Result;

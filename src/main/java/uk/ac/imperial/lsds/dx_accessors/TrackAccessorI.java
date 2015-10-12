@@ -4,7 +4,7 @@
  * @author pgaref
  *
  */
-package main.java.uk.ac.imperial.lsds.dx_controller;
+package main.java.uk.ac.imperial.lsds.dx_accessors;
 
 import main.java.uk.ac.imperial.lsds.dx_models.Track;
 import com.datastax.driver.mapping.Result;
@@ -17,11 +17,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 @Accessor
 public interface TrackAccessorI {
 	/*
-	 * TODO Figure out => WHY????
-	 * 
+	 * TODO Test Method
 	 */
-//	@Query("SELECT * FROM play_cassandra.tracks WHERE title = :title")
-//	public Result<Track> getbyTitle(@Param("title") String title);
+	@Query("SELECT * FROM play_cassandra.tracks WHERE title = :title")
+	public Result<Track> getbyTitle(@Param("title") String title);
+	
+	@Query("SELECT * FROM play_cassandra.tracks LIMIT :num")
+	public Result<Track> getTacksPage(@Param("num") int num);
 	
 	@Query("SELECT * FROM play_cassandra.tracks")
 	public Result<Track> getAll();
