@@ -3,10 +3,15 @@ package main.java.uk.ac.imperial.lsds.play2sdg;
 
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.dx_controller.CassandraDxQueryController;
+import main.java.uk.ac.imperial.lsds.dx_controller.ClusterManager;
+import main.java.uk.ac.imperial.lsds.dx_models.PlayList;
+import main.java.uk.ac.imperial.lsds.dx_models.Recommendation;
+import main.java.uk.ac.imperial.lsds.dx_models.StatsTimeseries;
+import main.java.uk.ac.imperial.lsds.dx_models.Track;
+import main.java.uk.ac.imperial.lsds.dx_models.User;
 import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
-import main.java.uk.ac.imperial.lsds.models.PlayList;
-import main.java.uk.ac.imperial.lsds.models.Recommendation;
+import main.java.uk.ac.imperial.lsds.utils.SystemStats;
 
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
@@ -14,12 +19,6 @@ import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.Rating;
 import org.apache.spark.storage.StorageLevel;
-
-import main.java.uk.ac.imperial.lsds.models.StatsTimeseries;
-import main.java.uk.ac.imperial.lsds.models.Track;
-import main.java.uk.ac.imperial.lsds.models.User;
-import main.java.uk.ac.imperial.lsds.utils.SystemStats;
-
 import org.apache.spark.api.java.JavaDoubleRDD;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -50,8 +49,9 @@ public class SparkCollaborativeFiltering {
 	private static Map<String, Integer> usersMap;
 	private static List<User> allusers;
 	private static Map<String, Integer> tracksMap;
-	private static List<Track> tracksList;
-	
+	private static List<Track> tracksList = new ArrayList<Track>(839122);
+	private static ClusterManager clusterManager = new ClusterManager("play_cassandra", 1, "155.198.198.12");
+	private static CassandraDxQueryController dxController = new CassandraDxQueryController(clusterManager.getSession());
 	
 	public static void main(String[] args) {
 		
@@ -93,7 +93,7 @@ public class SparkCollaborativeFiltering {
 		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
 		 */
-		tracksList = CassandraQueryController.listAllTracksWithPagination();
+		tracksList = dxController.getTracksPage(500000);
 		tracksMap = generateTrackMap( tracksList );
 		//LastFMDataParser parser = new LastFMDataParser(dataset_path);
 		//tracksList = LastFMDataParser.parseDataSet(false);
@@ -104,8 +104,8 @@ public class SparkCollaborativeFiltering {
 		 * Fetch PlayLists From Cassandra  - aka Ratings
 		 */
 		
-		allplaylists = CassandraQueryController.listAllPlaylists();
-		allusers = CassandraQueryController.listAllUsers();
+		allplaylists = dxController.getAllPlaylists();
+		allusers = dxController.getAllUsers();
 		usersMap = generateUserMap( allusers );
 		
 		logger.info("## Total Users Fetched # "+ usersMap.size() +" ##");
@@ -235,7 +235,7 @@ public class SparkCollaborativeFiltering {
 		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
 			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
 			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
-			newRec.getRecList().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
+			newRec.getRecMap().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
 			newUserSongRec.add(newRec);
 			//CassandraQueryController.persist(newRec);
 		}
@@ -247,8 +247,8 @@ public class SparkCollaborativeFiltering {
 		rdd.persist(StorageLevel.MEMORY_AND_DISK_SER());
 		rdd.foreach(new VoidFunction<Recommendation>() {
 			@Override
-			public void call(Recommendation t) throws Exception {
-				CassandraQueryController.persist(t);
+			public void call(Recommendation r) throws Exception {
+				dxController.persist(r);
 			}
 		});
 		
@@ -257,17 +257,17 @@ public class SparkCollaborativeFiltering {
  		 */
 		SystemStats perf  = new SystemStats();
 		StatsTimeseries sparkJobStats = new StatsTimeseries("sparkCF");
-		sparkJobStats.getStatsMap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
-		sparkJobStats.getStatsMap().put("Total Predictions", predictions.count()+"" );
-		sparkJobStats.getStatsMap().put("Mean Squared Error",  MSE+"" );
+		sparkJobStats.getMetricsMap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
+		sparkJobStats.getMetricsMap().put("Total Predictions", predictions.count()+"" );
+		sparkJobStats.getMetricsMap().put("Mean Squared Error",  MSE+"" );
 		
 		//-> Added Performance Data
-		sparkJobStats.persistData(perf);
-		CassandraQueryController.persist(sparkJobStats);
+		sparkJobStats.collectData(perf);
+		dxController.persist(sparkJobStats);
 		
 		
+		clusterManager.disconnect();
 		System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector- Job took: "+Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+""));
-		
 		/*
 		JavaRDD<Recommendation> recc = predictions.map(new Function<Tuple2<Tuple2<Integer, Integer>, Double>, Recommendation>() {
 
@@ -324,8 +324,8 @@ public class SparkCollaborativeFiltering {
 		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
 			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
 			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
-			newRec.getRecList().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
-			CassandraQueryController.persist(newRec);
+			newRec.getRecMap().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
+			dxController.persist(newRec);
 		}
 	}
 }
