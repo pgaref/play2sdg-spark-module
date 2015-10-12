@@ -3,6 +3,8 @@ package main.java.uk.ac.imperial.lsds.dx_models;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 
 import com.datastax.driver.mapping.annotations.Column;
@@ -11,7 +13,6 @@ import com.datastax.driver.mapping.annotations.Table;
 
 
 @Table(keyspace="play_cassandra", name = "tracks")
-
 public class Track{
 
 	@PartitionKey
@@ -26,10 +27,14 @@ public class Track{
 	
 	@Column(name = "releaseDate")
 	public 	Date releaseDate;
+	
+	@Column(name = "tags")
+	public List<String> tags;
+	
+	@Column(name = "similars")
+	public List<String> similars;
     
-    public Track(){
-    	
-    }
+    public Track(){}
     
     public Track(String id, String title, String artist, String releaseDate){
     	
@@ -118,6 +123,38 @@ public class Track{
 	 */
 	public void setTrack_id(String track_id) {
 		this.track_id = track_id;
+	}
+	
+	/**
+	 * @return the tags
+	 */
+	public List<String> getTags() {
+		if(tags == null)
+			tags = new LinkedList<String>();
+		return tags;
+	}
+
+	/**
+	 * @param tags the tags to set
+	 */
+	public void setTags(List<String> tags) {
+		this.tags = tags;
+	}
+	
+	/**
+	 * @return the similars
+	 */
+	public List<String> getSimilars() {
+		if(similars == null)
+			similars = new LinkedList<String>();
+		return similars;
+	}
+
+	/**
+	 * @param similars the similars to set
+	 */
+	public void setSimilars(List<String> similars) {
+		this.similars = similars;
 	}
 	
 	@Override

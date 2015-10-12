@@ -1,10 +1,12 @@
 package main.java.uk.ac.imperial.lsds.dx_models;
 
-import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.datastax.driver.mapping.annotations.ClusteringColumn;
+import com.datastax.driver.mapping.annotations.Column;
+import com.datastax.driver.mapping.annotations.PartitionKey;
 import com.datastax.driver.mapping.annotations.Table;
 
 import main.java.uk.ac.imperial.lsds.utils.SystemStats;
@@ -13,108 +15,97 @@ import main.java.uk.ac.imperial.lsds.utils.SystemStats;
 @Table(keyspace="play_cassandra", name = "statseries")
 public class StatsTimeseries {
 	
-//	@EmbeddedId
-//	private StatsCompoundKey key;
-//	
-//	@Column(name = "doubleVal")
-//	private Map<String, String> statsMap;
-//	
-//	public StatsTimeseries(){
-//		
-//	}
-//	
-//	public StatsTimeseries(String id){
-//		StatsCompoundKey k  = new StatsCompoundKey();
-//		this.key = k;
-//		this.key.setId(id);
-//		this.key.setTimestamp(new Date());
-//		this.statsMap = new HashMap<String, String>();
-//	}
-//	
-//	/**
-//	 * @return the id
-//	 */
-//	public String getId() {
-//		return this.key.getId();
-//	}
-//
-//	/**
-//	 * @param id the id to set
-//	 */
-//	public void setId(String id) {
-//		this.key.setId(id);
-//	}
-//
-//	/**
-//	 * @return the timestamp
-//	 */
-//	public java.util.Date getTimestamp() {
-//		return this.key.getTimestamp();
-//	}
-//
-//	/**
-//	 * @param timestamp the timestamp to set
-//	 */
-//	public void setTimestamp(java.util.Date timestamp) {
-//		this.key.setTimestamp(timestamp);
-//	}
-//
-//	/**
-//	 * @return the statsMap
-//	 */
-//	public Map<String, String> getStatsMap() {
-//		if(statsMap == null)
-//			statsMap = new HashMap<String, String>();
-//		return statsMap;
-//	}
-//
-//	/**
-//	 * @param statsMap the statsMap to set
-//	 */
-//	public void setStatsMap(Map<String, String> statsMap) {
-//		this.statsMap = statsMap;
-//	}
-//
-//	/**
-//	 * @return the key
-//	 */
-//	public StatsCompoundKey getKey() {
-//		return key;
-//	}
-//
-//	/**
-//	 * @param key the key to set
-//	 */
-//	public void setKey(StatsCompoundKey key) {
-//		this.key = key;
-//	}
-//
-//	public void persistData(SystemStats perf){
-//		this.getStatsMap().put("os-name", perf.getOsName());
-//		this.getStatsMap().put("cpu-vendor", perf.getCpuVendor());
-//		this.getStatsMap().put("cpu-freq", perf.getCpuFreq()+"");
-//		this.getStatsMap().put("cores-num", perf.getCpuCores()+"");
-//		this.getStatsMap().put("system-load", perf.getSystemLoad()+"");
-//		this.getStatsMap().put("system-loadavg", perf.getSystemLoadAverage() +"");
-//		
-//		int num = 0;
-//		for(Double val: perf.getCoresLoad()){
-//			this.getStatsMap().put("core-"+num, val+"");
-//			num++;
-//		}
-//		
-//		this.getStatsMap().put("mem-total", perf.getMemTotal()+"");
-//		this.getStatsMap().put("mem-avail", perf.getMemAvailable()+"");
-//	}
-//	
-//	public String toString(){
-//		StringBuffer toret = new StringBuffer();
-//		for(String k :this.getStatsMap().keySet() )
-//			toret.append( "K: "+ k + " V: "+ this.getStatsMap().get(k) );
-//		
-//		return "D: "+ this.getTimestamp() +
-//				"ID: "+ this.getId() +
-//				"["+toret.toString()+"]";
-//	}
+	//partition key
+	@PartitionKey
+	@Column(name = "id")
+    private String id;            
+    //cluster/ remaining key
+    @ClusteringColumn
+    @Column(name = "timestamp")
+	private java.util.Date timestamp;
+	
+	@Column(name = "metrics-map")
+	private Map<String, String> metricsMap;
+	
+	public StatsTimeseries(){}
+	
+	public StatsTimeseries(String id){
+		this.id = id;
+		this.timestamp = new Date();
+		this.metricsMap = new HashMap<String, String>();
+	}
+	
+	/**
+	 * @return the id
+	 */
+	public String getId() {
+		return id;
+	}
+
+	/**
+	 * @param id the id to set
+	 */
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	/**
+	 * @return the timestamp
+	 */
+	public java.util.Date getTimestamp() {
+		return timestamp;
+	}
+
+	/**
+	 * @param timestamp the timestamp to set
+	 */
+	public void setTimestamp(java.util.Date timestamp) {
+		this.timestamp = timestamp;
+	}
+
+	/**
+	 * @return the metricsMap
+	 */
+	public Map<String, String> getMetricsMap() {
+		return metricsMap;
+	}
+
+	/**
+	 * @param metricsMap the metricsMap to set
+	 */
+	public void setMetricsMap(Map<String, String> metricsMap) {
+		this.metricsMap = metricsMap;
+	}
+
+
+	public void collectData(SystemStats perf){
+		this.getMetricsMap().put("os-name", perf.getOsName());
+		this.getMetricsMap().put("cpu-vendor", perf.getCpuVendor());
+		this.getMetricsMap().put("cpu-freq", perf.getCpuFreq()+"");
+		this.getMetricsMap().put("cores-num", perf.getCpuCores()+"");
+		this.getMetricsMap().put("system-load", perf.getSystemLoad()+"");
+		this.getMetricsMap().put("system-loadavg", perf.getSystemLoadAverage() +"");
+		
+		int num = 0;
+		for(Double val: perf.getCoresLoad()){
+			this.getMetricsMap().put("core-"+num, val+"");
+			num++;
+		}
+		
+		this.getMetricsMap().put("mem-total", perf.getMemTotal()+"");
+		this.getMetricsMap().put("mem-avail", perf.getMemAvailable()+"");
+	}
+	
+	public String toString(){
+		StringBuffer toret = new StringBuffer();
+		for(String k :this.getMetricsMap().keySet() )
+			toret.append( "K: "+ k + " V: "+ this.getMetricsMap().get(k) );
+		
+		return "D: "+ this.getTimestamp() +
+				"ID: "+ this.getId() +
+				"["+toret.toString()+"]";
+	}
+
+
 
 }
