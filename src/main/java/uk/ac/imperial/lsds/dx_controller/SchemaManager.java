@@ -25,11 +25,15 @@ public class SchemaManager {
 				 "= {'class':'SimpleStrategy', 'replication_factor':"+SchemaManager.replication_factor+"};");
 	}
 	
+	public void alterKeyspace(){
+		session.execute("ALTER KEYSPACE "+SchemaManager.keyspace+" WITH REPLICATION  "+
+				"=   { 'class' : 'SimpleStrategy', 'replication_factor' :" +SchemaManager.replication_factor+"};");
+	}
 	
 	public void createCounterTable(){
 		session.execute( "CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".counters (" +
 					"key text PRIMARY KEY,"+
-			    	"counter int" +
+			    	"counter counter" +
 				");");
 	}
 	public void createPlayListsTable(){
@@ -54,14 +58,14 @@ public class SchemaManager {
 	}
 	
 	public void createTracksTable(){
-		session.execute("CREATE TABLE  IF NOT EXISTS "+SchemaManager.keyspace+".tracks ("+
+		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".tracks ("+
 				 	"key text PRIMARY KEY,"+
     				"artist text,"+
     				"releaseDate timestamp,"+
     				"title text"+
 				");");
 		// Secondary Index
-		session.execute("CREATE INDEX  IF NOT EXISTS ON "+SchemaManager.keyspace+".tracks (title);");	
+		session.execute("CREATE INDEX IF NOT EXISTS ON "+SchemaManager.keyspace+".tracks (title);");	
 	}
 	
 	public void createStatSeriesTable(){
@@ -125,6 +129,14 @@ public class SchemaManager {
 	 */
 	public static void setSession(Session session) {
 		SchemaManager.session = session;
+	}
+
+	public static int getReplication_factor() {
+		return replication_factor;
+	}
+
+	public static void setReplication_factor(int replication_factor) {
+		SchemaManager.replication_factor = replication_factor;
 	}
 	
 

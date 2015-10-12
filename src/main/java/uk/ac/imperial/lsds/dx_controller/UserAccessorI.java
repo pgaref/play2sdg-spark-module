@@ -1,3 +1,9 @@
+/**
+ * Accessor Interface Implementing Datastax Object Mapping
+ * Specific interface for User class
+ * @author pgaref
+ *
+ */
 package main.java.uk.ac.imperial.lsds.dx_controller;
 
 import main.java.uk.ac.imperial.lsds.dx_models.User;

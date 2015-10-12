@@ -112,12 +112,12 @@ public class ClusterManager {
 	}
 	
 	public static void main(String[] args) {
-		 logger.setLevel(Level.INFO);
-		//ClusterManager pg = new ClusterManager("play_cassandra", 1, "146.179.131.141");
-		ClusterManager pg = new ClusterManager("play_cassandra", 1, "155.198.198.12");
+		logger.setLevel(Level.INFO);
+		ClusterManager pg = new ClusterManager("play_cassandra", 1, "146.179.131.141");
+		//ClusterManager pg = new ClusterManager("play_cassandra", 1, "155.198.198.12");
 		pg.createSchema();
 		
-		pg.loadData();
+		//pg.loadData();
 		
 		Mapper<User> mapper = new MappingManager(pg.getSession()).mapper(User.class);
 		User me = mapper.get("pangaref@example.com");

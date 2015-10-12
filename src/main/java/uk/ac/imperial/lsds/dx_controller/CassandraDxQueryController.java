@@ -18,25 +18,32 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Select;
+import com.datastax.driver.core.querybuilder.Select.Where;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.Result;
 import com.datastax.driver.mapping.MappingManager;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
 
 /**
- * User Controller for Apache Cassandra back-end
- * @author pg1712
+ * Generic Object - Mapping Controller - similar to Facade Pattern
+ * All Accessor interface methods should be called here
+ *  
+ * @author pgaref
  *
  */
-
 public class CassandraDxQueryController {
 	
 	static Logger  logger = Logger.getLogger(CassandraDxQueryController.class);
-	static Counter songCounter = new Counter("tracks");
-	static Counter userCounter = new Counter("user");
+	static Counter trackCounter = new Counter("tracks");
+	static Counter userCounter = new Counter("users");
 	
 	private Session clusterSession;
 	private MappingManager manager;
@@ -47,14 +54,14 @@ public class CassandraDxQueryController {
 	}
 	
 	/**
-	 * User - Cassandra JPA 
+	 * User - Cassandra Object Mapping 
 	 * @param user
 	 */
 	
 	public void persist(User user) {
 		Mapper<User> userMapper = manager.mapper(User.class);
 		userMapper.save(user);
-		
+		//Counter ++
 	}
 
 	public User find(String email) {
@@ -62,13 +69,13 @@ public class CassandraDxQueryController {
 		return userMapper.get(email);
 	}
 	
-	public List<User> listAllUsers() {
+	public List<User> getAllUsers() {
 		UserAccessorI userAccessor = manager.createAccessor(UserAccessorI.class);
 		Result<User> users = userAccessor.getAll();
 		return users.all();
 	}
 	
-	public List<User> listAllUsersAsync() throws InterruptedException, ExecutionException {
+	public List<User> getAllUsersAsync() throws InterruptedException, ExecutionException {
 		UserAccessorI userAccessor = manager.createAccessor(UserAccessorI.class);
 		ListenableFuture<Result<User>> users = userAccessor.getAllAsync();
 		return users.get().all();
@@ -81,165 +88,74 @@ public class CassandraDxQueryController {
 	 */
 	
 	public void persist(Track song) {
-		Mapper<Track> userMapper = manager.mapper(Track.class);
-		userMapper.save(song);
+		Mapper<Track> trackMapper = manager.mapper(Track.class);
+		trackMapper.save(song);
 	}
 	
-	public static void remove(Track song) {
-//		EntityManager em = getEntintyManagerCustom();
-//		em.remove(song);
-//		decrement(songCounter);
-//		em.close();
-//		logger.debug("\n Track: " + song.getTitle() + " record REMOVED using persistence unit ->" +getEntintyManagerCustom());
+	public void remove(Track song) {
+		Mapper<Track> trackMapper = manager.mapper(Track.class);
+		trackMapper.delete(song);
+		//counter--
 	}
 	
-	public static Track findByTrackID(String id){
-//		EntityManager em = getEntintyManagerCustom();
-//		//Track t = em.find(Track.class, id);
-//		Query q = em.createNativeQuery("SELECT * FROM \"tracks\" WHERE \"key\"='"+id+"';", Track.class);
-//		q.setMaxResults(1);
-//		List<Track> t = q.getResultList();
-//		if(t == null)
-//			logger.debug("Tack "+ id +" not found in the database!");
-//		return t.get(0);
-		return null;
-		
+	public Track findByTrackID(String id){
+		Mapper<Track> trackMapper = manager.mapper(Track.class);
+		return trackMapper.get(id);
 	}
 	
-	public static Track findTrackbyTitle(String title) {
-//		/*
-//		 * Use NativeQuery to avoid Strings being used as cassandra keywords!
-//		 * https://github.com/impetus-opensource/Kundera/issues/151
-//		 * Incompatible with CQL2 !!
-//		 */
-//		
-//		EntityManager em = getEntintyManagerCustom();
-//        
-//		Query findQuery = em
-//				.createNativeQuery("SELECT * FROM tracks WHERE title = '"+ title+"';", Track.class);
-//		if(findQuery.getResultList().size() == 0){
-//			logger.debug("Could not find any Tracks with title: "+ title);
-//			return null;	
-//		}
-//		if(findQuery.getResultList().size() >1 )
-//			logger.warn("Query Returned more than one Tracks with title: "+ title);
-//		return (Track) findQuery.getResultList().get(0);
+	public List<Track> findTrackbyTitle(String title) {
+//		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+//		List<Track> t = taccessor.getbyTitle(title).all();
+		Statement s = QueryBuilder.select()
+				.all()
+				.from("play_cassandra", "tracks")
+				.where(eq("title",title));
+		ResultSet re  = this.manager.getSession().execute(s);
+		for(Row r : re.all()){
+			System.out.println("row: "+ r);
+		}
+		//System.out.println("Got: "+ t);
 		return null;
 	}
 	
-	public static List<Track> listAllTracks() {
-//		EntityManager em = getEntintyManagerCustom();
-//		Query findQuery = em.createQuery("Select s from Track s", Track.class);
-//		findQuery.setMaxResults(Integer.MAX_VALUE);
-//		List<Track> allSongs = findQuery.getResultList();
-//		em.close();
-//		
-//		logger.debug("\n ##############  Listing All Track, Total Size:" + allSongs.size() +" ############## \n ");
-////		for (Song s : allSongs) {
-////			logger.debug("\n Got Song: \n" + s);
-////		}
-		return null;
+	public List<Track> getAllTracks() {
+		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+		return taccessor.getAll().all();
 	}
 	
-	public static List<Track> listAllTracksWithPagination() {
-		
-//		EntityManager em = getEntintyManagerCustom();
-//		List<Track> allTracks = new ArrayList<Track>();
-//		
-//		Query firstPage =em.createQuery("Select s from Track s", Track.class);
-//		firstPage.setMaxResults(5000);
-//		
-//		@SuppressWarnings("unchecked")
-//		List<Track> result = firstPage.getResultList();
-//		logger.debug("\n ##############  Listing First Track page ############## \n ");
-//		allTracks.addAll(result);
-//		
-//		while(allTracks.size() < DatastaxCassandraQueryController.getCounterValue("tracks") ){
-//			em = getEntintyManagerCustom();
-//			Query findQuery = em
-//				.createNativeQuery("SELECT * FROM tracks WHERE token(key) > token('"+ allTracks.get(allTracks.size()-1).getTrack_id() +"') LIMIT 5000;", Track.class);
-//			findQuery.setMaxResults(5000);
-//			@SuppressWarnings("unchecked")
-//			List<Track> nextPageTracks = findQuery. getResultList();
-//			allTracks.addAll(nextPageTracks);
-//			logger.debug("\n ##############  Listing Next Track page, Current Size: "+ allTracks.size() +"  After TrackID: "+ allTracks.get(allTracks.size()-1).getTrack_id() +" ############## \n ");
-//
-//		} 
-//		
-		return null;
+	public List<Track> getAllTracksAsync() {
+		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+		return taccessor.getAll().all();
+	}
+	
+	public static List<Track> getAllTracksWithPagination() throws Exception {
+		throw new Exception("Not implemented yet!!");
+		//return null;
 	}
 	
 	/**
 	 * GENERIC counter - Cassandra JPA
-	 * @param Generic counter
 	 * 
 	 */
 	
-	public static void increment(Counter counter) {
-//		EntityManager em = getEntintyManagerCustom();
-//		Counter tmp = em.find(Counter.class, counter.getId());
-//		if(tmp == null){
-//			if(counter.getId() == "tracks"){
-//				songCounter.incrementCounter();
-//				em.persist(songCounter);
-//				logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
-//			}
-//			else if(counter.getId() == "user"){
-//				userCounter.incrementCounter();
-//				em.persist(userCounter);
-//				logger.debug("Generic: " + userCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
-//			}
-//		}
-//		else{
-//			if(counter.getId() == "tracks"){
-//				songCounter.incrementCounter();
-//				em.merge(songCounter);
-//				logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
-//			}
-//			else if(counter.getId() == "user"){
-//				userCounter.incrementCounter();
-//				em.merge(userCounter);
-//				logger.debug("Generic: " + userCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
-//			}
-//		}
-
+	public Counter getCounter(String key){
+		Mapper<Counter> cmapper = manager.mapper(Counter.class);
+		return cmapper.get(key);
 	}
 	
-	public static void decrement(Counter counter) {
-//		EntityManager em = getEntintyManagerCustom();
-//		Counter tmp = em.find(Counter.class, counter.getId());
-//		if(tmp == null){
-//			if(counter.getId() == "tracks"){
-//				songCounter.decrementCounter();
-//				em.persist(songCounter);
-//				logger.debug("Generic: " + songCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
-//			}
-//			else if(counter.getId() == "user"){
-//				userCounter.decrementCounter();
-//				em.persist(userCounter);
-//				logger.debug("Generic: " + userCounter.getId() + "Counter persisted using persistence unit -> cassandra_pu");
-//			}
-//		}
-//		else{
-//			if(counter.getId() == "tracks"){
-//				songCounter.decrementCounter();
-//				em.merge(songCounter);
-//				logger.debug("Generic: " + songCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
-//			}
-//			else if(counter.getId() == "user"){
-//				userCounter.decrementCounter();
-//				em.merge(userCounter);
-//				logger.debug("Generic: " + userCounter.getId() + "Counter merged using persistence unit -> cassandra_pu");
-//			}
-//			
-//		}
-//		em.close();
-
+	public void increment(Counter counter) {
+		CounterAccessorI caccessor = manager.createAccessor(CounterAccessorI.class);
+		caccessor.incrementCounter(counter.getId());
 	}
 	
-	public static int getCounterValue(String id){
-
-		return 0;
+	public void decrement(Counter counter) {
+		CounterAccessorI caccessor = manager.createAccessor(CounterAccessorI.class);
+		caccessor.decrementCounter(counter.getId());
+	}
+	
+	public long getCounterValue(String key){
+		Mapper<Counter> cmapper = manager.mapper(Counter.class);
+		return cmapper.get(key).getCounter();
 	}
 	
 	/**
@@ -253,7 +169,7 @@ public class CassandraDxQueryController {
 
 	}
 	
-	public static List<Recommendation> listAllRecommendations(){
+	public static List<Recommendation> getAllRecommendations(){
 //		EntityManager em = getEntintyManagerCustom();
 //		Query findQuery = em.createQuery("Select r from Recommendation r", Recommendation.class);
 //		findQuery.setMaxResults(Integer.MAX_VALUE);
@@ -287,66 +203,39 @@ public class CassandraDxQueryController {
 	 */
 
 	public void persist(PlayList p) {
-		Mapper<PlayList> userMapper = manager.mapper(PlayList.class);
-		userMapper.save(p);
+		Mapper<PlayList> plMapper = manager.mapper(PlayList.class);
+		plMapper.save(p);
 	}
 	
-	public static List<PlayList> listAllPlaylists(){
-
-		return null;
+	public List<PlayList> getAllPlaylists(){
+		PlaylistAccessorI plAccessor = manager.createAccessor(PlaylistAccessorI.class);
+		Result<PlayList> playlists = plAccessor.getAll();
+		return playlists.all();
+	}
+	public List<PlayList> getAllPlaylistsAsync() throws InterruptedException, ExecutionException{
+		PlaylistAccessorI plAccessor = manager.createAccessor(PlaylistAccessorI.class);
+		ListenableFuture<Result<PlayList>> playlists = plAccessor.getAllAsync();
+		return playlists.get().all();
 	}
 	
-	public static List<PlayList> getUserPlayLists(String usermail){
-//		EntityManager em = getEntintyManagerCustom();
-//		Query findQuery = em
-//				.createQuery("Select p from PlayList p where p.usermail = " +usermail );
-//		@SuppressWarnings("unchecked")
-//		List<PlayList> tmp =  (List<PlayList>) findQuery.getResultList();
-//		
-//		//Avoid null saved playlists - scala Option is another alternative to catch null pointers
-//		if(tmp == null){
-//			logger.debug("User: "+ usermail + " has NO playlists!");
-//			return null;
-//		}	
-//		//Avoid null pointers in SCALA viewsongs!
-//		for(PlayList p : tmp ){
-//			if(p.getTracks() == null)
-//				p.setTracks(new ArrayList<String>());
-//		}
-//		logger.debug("\n\n---->>> getUserPlayLists QUery returned: "+ tmp) ;
-		return null;
+	public List<PlayList> getUserPlayLists(String usermail){
+		PlaylistAccessorI plAccessor = manager.createAccessor(PlaylistAccessorI.class);
+		Result<PlayList> playlists = plAccessor.getUserPlaylists(usermail);
+		return playlists.all();
 	}
 	
-	public static boolean deleteUserPlayListSong(UUID playlistid, String song){
-//		EntityManager em = getEntintyManagerCustom();
-//		Query findQuery = em.createNativeQuery("Select * from playlists  where token(id) = token("+ playlistid + ");", PlayList.class );
-//		@SuppressWarnings("unchecked")
-//		List<PlayList> p = findQuery.getResultList();
-//		assert(p.size() != 1);
-//		for(int i =0 ; i < p.get(0).getTracks().size(); i++){
-//			if(p.get(0).getTracks().get(i).compareTo(song) == 0){
-//				p.get(0).getTracks().remove(i);
-//				em.merge(p.get(0));
-//				return true;
-//			}
-//		}			
-		return false;
+	public boolean deleteUserPlayListSong(UUID playlistid, String song){		
+		Mapper<PlayList> plMapper = manager.mapper(PlayList.class);
+		PlayList existing = plMapper.get(playlistid);
+		if(existing == null)
+			return false;
+		List<String> tracksToUpdate = existing.getTracks();
+		tracksToUpdate.remove(song);
+		PlaylistAccessorI plAccessor = manager.createAccessor(PlaylistAccessorI.class);
+		plAccessor.deleteUserPlayListSong(playlistid, tracksToUpdate);
+		
+		return (existing.getTracks().size() != tracksToUpdate.size());
 	}
-
-
-//	public static void persist(Stats s) {	
-//	}
-//	
-//	public static List<Stats> getAllStats(){
-////		EntityManager em = getEntintyManagerCustom();
-////		Query findQuery = em.createQuery("Select s from Stats s", Stats.class);
-////		findQuery.setMaxResults(Integer.MAX_VALUE);
-////		List<Stats> allStats = findQuery.getResultList();
-////		em.close();
-////		
-////		logger.debug("\n ##############  Listing All Stats, Total Size:" + allStats.size() +" ############## \n ");
-//		return null;
-//	}
 	
 	/**
 	 * New TimeSeries Stats - Cassandra JPA
@@ -372,26 +261,44 @@ public class CassandraDxQueryController {
 		return null;
 	}
 	
-	//ALTER KEYSPACE play_cassandra WITH REPLICATION =   { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
-	public static int UpdateKeyspaceRF(String ks,int rf){
-//		EntityManager em = getEntintyManagerCustom();
-//		Query alterQ = em.createQuery("ALTER KEYSPACE "+ks +" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : " + rf +"};");
-//		int result = alterQ.executeUpdate();
-//		em.close();
-//		
-//		logger.debug("\n ##############  Altering keyspace :"+ ks  + " with new Replication factor:" + rf +" ############## \n ");
-		return 0;
-	}
-	
 	
 	
 	public static void main(String[] args) {
 		ClusterManager cm = new ClusterManager("play_cassandra", 1, "146.179.131.141");
 		CassandraDxQueryController dx = new CassandraDxQueryController(cm.getSession());
 		
-		List<User> got = dx.listAllUsers();
-		System.out.println("Size:"+ got.size());
-		//System.out.println(got);
+		/*
+		List<User> allusers = dx.getAllUsers();
+		System.out.println("Size:"+ allusers.size());
+		
+		List<PlayList> allLists = dx.getAllPlaylists();
+		System.out.println("All list "+ allLists.size());
+		*/
+		List<PlayList> pgLists = dx.getUserPlayLists("pangaref@example.com");
+		for(PlayList list : pgLists)
+			System.out.println("pgList "+ list.toString());
+		System.out.println("Deleted: "+ dx.deleteUserPlayListSong(pgLists.get(0).getId(), "Goodbye"));
+		
+		
+		List<Track> byTitle = dx.findTrackbyTitle("Goodbye");
+		System.out.println("Got By Title: "+ byTitle);
+		
+		
+//		Counter userCount = dx.getCounter("user");
+//		System.out.println("Counter "+ userCount );
+//		long cval = dx.getCounterValue("user");
+//		System.out.println("Cval"+cval);
+		Counter userCount = new Counter("user");
+		long cval;
+		dx.increment(userCount);
+		cval = dx.getCounterValue("user");
+		System.out.println("After inc Cval = "+cval);
+		dx.decrement(userCount);
+		cval = dx.getCounterValue("user");
+		System.out.println("After decr Cval = "+cval);
+				
+		cm.disconnect();
+		System.out.println("Cluster Manager disconnected! ");
 		
 	}
 }
