@@ -92,9 +92,9 @@ public class ClusterManager {
 		}
 	}
 
-	public void loadData() {
+	public void loadData(String userDataPath, String trackDataPath) {
 		logger.info("Loading Data");
-		PrepareData p = new PrepareData("data/users.txt", "data/LastFM/lastfm_train", this.getSession());
+		PrepareData p = new PrepareData(userDataPath, trackDataPath, this.getSession(), true);
 		logger.info("Finished Loading data");
 	}
 
@@ -113,11 +113,13 @@ public class ClusterManager {
 	
 	public static void main(String[] args) {
 		logger.setLevel(Level.INFO);
-		ClusterManager pg = new ClusterManager("play_cassandra", 1, "146.179.131.141");
-		//ClusterManager pg = new ClusterManager("play_cassandra", 1, "155.198.198.12");
+		//ClusterManager pg = new ClusterManager("play_cassandra", 1, "146.179.131.141");
+		ClusterManager pg = new ClusterManager("play_cassandra", 1, "155.198.198.12");
+		pg.dropSchema();
 		pg.createSchema();
 		
-		//pg.loadData();
+		pg.loadData("data/users.txt", "data/LastFM/lastfm_train");
+		//pg.loadData("data/users.txt", "data/LastFM/lastfm_subset");
 		
 		Mapper<User> mapper = new MappingManager(pg.getSession()).mapper(User.class);
 		User me = mapper.get("pangaref@example.com");
@@ -126,9 +128,6 @@ public class ClusterManager {
 		
 		pg.session.close();
 		pg.cluster.close();
-		
-		
-		 
 		 
 	}
 	

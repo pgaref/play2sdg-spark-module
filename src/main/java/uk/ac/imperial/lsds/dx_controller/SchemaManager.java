@@ -62,28 +62,29 @@ public class SchemaManager {
 				 	"key text PRIMARY KEY,"+
     				"artist text,"+
     				"releaseDate timestamp,"+
-    				"title text"+
+    				"title text,"+
+    				"tags list<text>,"+
+    				"similars list<text>"+
 				");");
 		// Secondary Index
 		session.execute("CREATE INDEX IF NOT EXISTS ON "+SchemaManager.keyspace+".tracks (title);");	
 	}
 	
-	public void createStatSeriesTable(){
-		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".statseries ("+
-					"id text,"+
-					"timestamp timestamp,"+
-					"doubleVal map<text, text>,"+
-					"PRIMARY KEY (id, timestamp)"+
-				");");
-	}
-	
 	public void createRecommendationsTable(){
 		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".recommendations ("+
 					"email text PRIMARY KEY,"+
-					"\"rec-list\" map<text, double>"+
+					"\"rec-map\" map<text, double>"+
 				");");
 	}
 	
+	public void createStatTimeseriesTable(){
+		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".statseries (" +
+				    "id text," +
+				    "timestamp timestamp," +
+				    "\"metrics-map\" map<text, text>," +
+				    "PRIMARY KEY (id, timestamp)" +
+				");");
+	}
 	
 	public void createSchema() throws Exception {
 		if(SchemaManager.session.isClosed()){
@@ -96,6 +97,7 @@ public class SchemaManager {
 		createUserTable();
 		createTracksTable();
 		createRecommendationsTable();
+		createStatTimeseriesTable();
 		
 	}
 	

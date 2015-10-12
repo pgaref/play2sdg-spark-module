@@ -1,12 +1,18 @@
 package main.java.uk.ac.imperial.lsds.dx_controller;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+
+import org.apache.log4j.Logger;
+
 import java.util.concurrent.ExecutionException;
 
+import main.java.uk.ac.imperial.lsds.dx_accessors.CounterAccessorI;
+import main.java.uk.ac.imperial.lsds.dx_accessors.PlaylistAccessorI;
+import main.java.uk.ac.imperial.lsds.dx_accessors.RecommendationAccessorI;
+import main.java.uk.ac.imperial.lsds.dx_accessors.StatsTimeseriesAccessorI;
+import main.java.uk.ac.imperial.lsds.dx_accessors.TrackAccessorI;
+import main.java.uk.ac.imperial.lsds.dx_accessors.UserAccessorI;
 import main.java.uk.ac.imperial.lsds.dx_models.Counter;
 import main.java.uk.ac.imperial.lsds.dx_models.PlayList;
 import main.java.uk.ac.imperial.lsds.dx_models.Recommendation;
@@ -14,22 +20,13 @@ import main.java.uk.ac.imperial.lsds.dx_models.StatsTimeseries;
 import main.java.uk.ac.imperial.lsds.dx_models.Track;
 import main.java.uk.ac.imperial.lsds.dx_models.User;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select;
-import com.datastax.driver.core.querybuilder.Select.Where;
 import com.datastax.driver.mapping.Mapper;
-import com.datastax.driver.mapping.Result;
 import com.datastax.driver.mapping.MappingManager;
+import com.datastax.driver.mapping.Result;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
+//import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
 
 /**
@@ -44,6 +41,7 @@ public class CassandraDxQueryController {
 	static Logger  logger = Logger.getLogger(CassandraDxQueryController.class);
 	static Counter trackCounter = new Counter("tracks");
 	static Counter userCounter = new Counter("users");
+	static Counter playlistCounter = new Counter("playlists");
 	
 	private Session clusterSession;
 	private MappingManager manager;
@@ -61,7 +59,7 @@ public class CassandraDxQueryController {
 	public void persist(User user) {
 		Mapper<User> userMapper = manager.mapper(User.class);
 		userMapper.save(user);
-		//Counter ++
+		this.increment(userCounter);
 	}
 
 	public User find(String email) {
@@ -90,12 +88,13 @@ public class CassandraDxQueryController {
 	public void persist(Track song) {
 		Mapper<Track> trackMapper = manager.mapper(Track.class);
 		trackMapper.save(song);
+		this.increment(trackCounter);
 	}
 	
 	public void remove(Track song) {
 		Mapper<Track> trackMapper = manager.mapper(Track.class);
 		trackMapper.delete(song);
-		//counter--
+		this.decrement(trackCounter);
 	}
 	
 	public Track findByTrackID(String id){
@@ -104,18 +103,16 @@ public class CassandraDxQueryController {
 	}
 	
 	public List<Track> findTrackbyTitle(String title) {
-//		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
-//		List<Track> t = taccessor.getbyTitle(title).all();
-		Statement s = QueryBuilder.select()
-				.all()
-				.from("play_cassandra", "tracks")
-				.where(eq("title",title));
-		ResultSet re  = this.manager.getSession().execute(s);
-		for(Row r : re.all()){
-			System.out.println("row: "+ r);
-		}
-		//System.out.println("Got: "+ t);
-		return null;
+		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+		return taccessor.getbyTitle(title).all();
+//		Statement s = QueryBuilder.select()
+//				.all()
+//				.from("play_cassandra", "tracks")
+//				.where(eq("title",title));
+//		ResultSet re  = this.manager.getSession().execute(s);
+//		for(Row r : re.all()){
+//			System.out.println("row: "+ r);
+//		}
 	}
 	
 	public List<Track> getAllTracks() {
@@ -128,9 +125,9 @@ public class CassandraDxQueryController {
 		return taccessor.getAll().all();
 	}
 	
-	public static List<Track> getAllTracksWithPagination() throws Exception {
-		throw new Exception("Not implemented yet!!");
-		//return null;
+	public List<Track> getTracksPage(int tracksNum) {
+		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+		return taccessor.getTacksPage(tracksNum).all();
 	}
 	
 	/**
@@ -169,37 +166,23 @@ public class CassandraDxQueryController {
 	 * 
 	 */
 	public void persist(Recommendation r) {
-		Mapper<Recommendation> userMapper = manager.mapper(Recommendation.class);
-		userMapper.save(r);
-
+		Mapper<Recommendation> recMapper = manager.mapper(Recommendation.class);
+		recMapper.save(r);
 	}
 	
-	public static List<Recommendation> getAllRecommendations(){
-//		EntityManager em = getEntintyManagerCustom();
-//		Query findQuery = em.createQuery("Select r from Recommendation r", Recommendation.class);
-//		findQuery.setMaxResults(Integer.MAX_VALUE);
-//		List<Recommendation> allRec = findQuery.getResultList();
-//		em.close();
-//		
-//		logger.debug("\n ##############  Listing All Recommendations, Total Size:" + allRec.size() +" ############## \n ");
-		return null;
+	public List<Recommendation> getAllRecommendations(){
+		RecommendationAccessorI raccessor = manager.createAccessor(RecommendationAccessorI.class);
+		return raccessor.getAll().all();
 	}
 	
-	public static Recommendation getUserRecc(String usermail){
-//		EntityManager em = getEntintyManagerCustom();
-
-		
-//		Recommendation found = em.find(Recommendation.class, usermail);
-//
-//		if(found == null){
-//			logger.debug("\n Recommendations for user : "+ usermail +" NOT FOUND!!!");
-//			return null;
-//		}
-//		else{
-//			return found;
-//		}
-		return null;
-
+	public List<Recommendation> getAllRecommendationsAsync(){
+		RecommendationAccessorI raccessor = manager.createAccessor(RecommendationAccessorI.class);
+		return raccessor.getAll().all();
+	}
+	
+	public Recommendation getUserRecommendations(String usermail){
+		Mapper<Recommendation> recMapper = manager.mapper(Recommendation.class);
+		return recMapper.get(usermail);
 	}
 	/**
 	 * Playlist - Cassandra JPA
@@ -210,6 +193,7 @@ public class CassandraDxQueryController {
 	public void persist(PlayList p) {
 		Mapper<PlayList> plMapper = manager.mapper(PlayList.class);
 		plMapper.save(p);
+		this.increment(playlistCounter);
 	}
 	
 	public List<PlayList> getAllPlaylists(){
@@ -225,8 +209,7 @@ public class CassandraDxQueryController {
 	
 	public List<PlayList> getUserPlayLists(String usermail){
 		PlaylistAccessorI plAccessor = manager.createAccessor(PlaylistAccessorI.class);
-		Result<PlayList> playlists = plAccessor.getUserPlaylists(usermail);
-		return playlists.all();
+		return plAccessor.getUserPlaylists(usermail).all();
 	}
 	
 	public boolean deleteUserPlayListSong(UUID playlistid, String song){		
@@ -243,7 +226,7 @@ public class CassandraDxQueryController {
 	}
 	
 	/**
-	 * New TimeSeries Stats - Cassandra JPA
+	 * New TimeSeries Stats - Cassandra Object Mapper
 	 * @param Stats
 	 * 
 	 */
@@ -253,23 +236,19 @@ public class CassandraDxQueryController {
 	}
 	
 	
-	public static List<StatsTimeseries> getAllStatsTimeseries(String statsID){
-//		
-//		EntityManager em = getEntintyManagerCustom();
-//		Query findQuery = em.createNativeQuery("SELECT * FROM \"statseries\" WHERE \"id\"='"+statsID+"';", StatsTimeseries.class);
-//		//Query findQuery = em.createQuery("Select s from StatsTimeseries s", StatsTimeseries.class);
-//		findQuery.setMaxResults(Integer.MAX_VALUE);
-//		List<StatsTimeseries> allStats = findQuery.getResultList();
-//		em.close();
-//		
-//		logger.debug("\n ##############  Listing All StatsTimeseries, Total Size:" + allStats.size() +" ############## \n ");
-		return null;
+	public List<StatsTimeseries> getAllStatsTimeseries(String statsID){
+		StatsTimeseriesAccessorI saccessor = manager.createAccessor(StatsTimeseriesAccessorI.class);
+		return saccessor.getAll().all();
+	}
+	public List<StatsTimeseries> getAllStatsTimeseriesAsync(String statsID) throws InterruptedException, ExecutionException{
+		StatsTimeseriesAccessorI saccessor = manager.createAccessor(StatsTimeseriesAccessorI.class);
+		return saccessor.getAllAsync().get().all();
 	}
 	
 	
-	
 	public static void main(String[] args) {
-		ClusterManager cm = new ClusterManager("play_cassandra", 1, "146.179.131.141");
+		//ClusterManager cm = new ClusterManager("play_cassandra", 1, "146.179.131.141");
+		ClusterManager cm = new ClusterManager("play_cassandra", 1, "155.198.198.12");
 		CassandraDxQueryController dx = new CassandraDxQueryController(cm.getSession());
 		
 		/*
@@ -286,14 +265,15 @@ public class CassandraDxQueryController {
 		
 		
 		List<Track> byTitle = dx.findTrackbyTitle("Goodbye");
-		System.out.println("Got By Title: "+ byTitle);
+		System.out.println("Got By Title: Goodbye , TOTAL="+ byTitle.size());
 		
 		
 //		Counter userCount = dx.getCounter("user");
 //		System.out.println("Counter "+ userCount );
 //		long cval = dx.getCounterValue("user");
 //		System.out.println("Cval"+cval);
-		Counter userCount = new Counter("user");
+
+/*		Counter userCount = new Counter("user");
 		long cval;
 		dx.increment(userCount);
 		cval = dx.getCounterValue("user");
@@ -301,9 +281,21 @@ public class CassandraDxQueryController {
 		dx.decrement(userCount);
 		cval = dx.getCounterValue("user");
 		System.out.println("After decr Cval = "+cval);
-		dx.incrementByValue(userCount,10007);
-		cval = dx.getCounterValue("user");
-		System.out.println("After inByVal Cval = "+cval);
+
+		System.out.println("Rec List Size: "+ dx.getAllRecommendations().size());
+		
+		System.out.println("pangaref Recs: "+ dx.getUserRecommendations("pangaref@example.com").email);
+		System.out.println("pangaref Recs: "+ dx.getUserRecommendations("pangaref@example.com").toString());
+*/
+		StatsTimeseries ts = new StatsTimeseries("pgSeriesTest");
+		ts.getMetricsMap().put("cpu-util", "90%");
+		ts.getMetricsMap().put("ram", "50%");
+		dx.persist(ts);
+		
+		ts = new StatsTimeseries("pgSeriesTest");
+		ts.getMetricsMap().put("cpu-util", "90%");
+		ts.getMetricsMap().put("ram", "50%");
+		dx.persist(ts);
 				
 		cm.disconnect();
 		System.out.println("Cluster Manager disconnected! ");
