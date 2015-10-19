@@ -7,7 +7,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.cassandra.KunderaCassandraQueryController;
 
 
 @Entity
@@ -79,7 +79,7 @@ public class Counter implements Serializable{
 	 */
 	
 	public static int getTracksCounter(){
-		return CassandraQueryController.getCounterValue("tracks");
+		return KunderaCassandraQueryController.getCounterValue("tracks");
 	}
 
 }
