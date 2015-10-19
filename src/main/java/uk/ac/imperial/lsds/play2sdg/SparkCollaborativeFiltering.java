@@ -1,6 +1,8 @@
 package main.java.uk.ac.imperial.lsds.play2sdg;
 
 
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
+
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 
 import main.java.uk.ac.imperial.lsds.dx_controller.CassandraDxQueryController;
@@ -24,6 +26,7 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.SparkConf;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,99 +37,147 @@ import scala.Tuple2;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 
+import com.datastax.spark.connector.japi.CassandraRow;
 
-public class SparkCollaborativeFiltering {
 
-	static Logger  logger = Logger.getLogger(SparkCollaborativeFiltering.class);
+public class SparkCollaborativeFiltering implements Serializable{
+
+	static Logger logger = Logger.getLogger(SparkCollaborativeFiltering.class);
 	
 	/**
 	 * Change for HDFS
 	 */
-	private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-data";
+	//private static final String dataset_path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/spark-data";
 	//private static final String dataset_path = "/spark-data";
 	
 	private static List<PlayList> allplaylists;
 	private static Map<String, Integer> usersMap;
 	private static List<User> allusers;
 	private static Map<String, Integer> tracksMap;
-	private static List<Track> tracksList;
-	private static ClusterManager clusterManager = new ClusterManager("play_cassandra", 1, "155.198.198.12");
-	private static CassandraDxQueryController dxController = new CassandraDxQueryController(clusterManager.getSession());
+	private static List<String> tracksList;
+//	private static ClusterManager clusterManager = new ClusterManager("play_cassandra", 1, "146.179.131.141");
+//	private static CassandraDxQueryController dxController = new CassandraDxQueryController(clusterManager.getSession());
 	
-	public static void main(String[] args) {
+	//No need to serialise
+	private transient SparkConf conf;
+	public SparkCollaborativeFiltering(SparkConf c) {this.conf = c;}
+	
+	public static SparkConf createSparkConf(String master, String cassandra_host){
+    	return new SparkConf()
+    	.setAppName("Spark Cassandra Connector DEMO")
+    	.setMaster(master)
+    	.set("spark.cassandra.connection.host", cassandra_host)
+    	//Not-Compatible in driver version 1.2
+    	//.set("spark.cassandra.input.split.size_in_mb", "67108864")
+    	.set("spark.executor.memory", "1g");
+    }
 		
-	    Logger.getLogger("org").setLevel(Level.WARN);
-	    Logger.getLogger("akka").setLevel(Level.WARN);
-	    //This is the root logger provided by log4j
-	    Logger rootLogger = Logger.getRootLogger();
-	    rootLogger.setLevel(Level.WARN);
-	    
-	    java.util.logging.Logger.getGlobal().setLevel(java.util.logging.Level.OFF);
-
-		long jobStarted = System.currentTimeMillis();
-		SparkConf conf = new SparkConf()
-				/*	Fraction of memory reserved for caching
-				 *	default is 0.6, which means you only get 0.4 * 4g memory for your heap
-				 */
-				//.set("spark.storage.memoryFraction", "0.1")
-				//spark-submit alternative: --driver-memory 2g
-				/*
-				 * Does not make any difference if running on the same machine 
-				 */
-				//.set("spark.driver.memory", "3g")
-				.set("spark.executor.memory","1g")
-				.set("spark.driver.maxResultSize","1g")
-				//.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk")
-				.setMaster("local[8]")
-				//.setMaster("mesos://wombat30.doc.res.ic.ac.uk:5050")
-				.setAppName("play2sdg Collaborative Filtering Job");
+	static{
+		Logger.getLogger("org").setLevel(Level.ERROR);
+		Logger.getLogger("akka").setLevel(Level.ERROR);
+		//This is the root logger provided by log4j
+		Logger rootLogger = Logger.getRootLogger();
+		rootLogger.setLevel(Level.INFO);
+		java.util.logging.Logger.getGlobal().setLevel(java.util.logging.Level.INFO);
+	}
+	
+	private void run() {
+		long startTime = System.currentTimeMillis();
+		SparkCassandraConnector cassandraConnector = new SparkCassandraConnector(this.conf);
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		
-		
 		/*
 		 *  Fetch the Track List 
 		*/ 
-		//LastFMDataParser parser = new LastFMDataParser( "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
-		//LastFMDataParser parser = new LastFMDataParser( "data/LastFM/lastfm_subset");
 		logger.info("## Listing all Tracks Stored at Cassandra ## ");
+		tracksList = cassandraConnector.fetchAllTracks(sc);
+		
+		tracksMap = generateTrackMap( );
+		logger.info("## Generated # "+ tracksMap.size() +" Track IDs ##");
+		
+		allplaylists = cassandraConnector.fetchAllPlayLists(sc);
+		allusers = cassandraConnector.fetchAllUsers(sc);
+		
+		usersMap = generateUserMap( );
+		logger.info("## Generated # "+ usersMap.size() +" User IDs ##");
+		
+		for(String tmp : usersMap.keySet())
+			System.out.println("UserMap K:"+tmp + " V: "+usersMap.get(tmp));
+		
+		
+		JavaRDD<Rating> ratings = generateRatings(sc);
+		logger.info("## Generated # "+ ratings.count() +" Ratings ##");
 		/*
-		 * LastFMDataParser parser = new LastFMDataParser(dataset_path);
-		 * final List<Track> tracksList = LastFMDataParser.parseDataSet(false);
-		 */
-		tracksList = dxController.getTracksPage(500000);
-		tracksMap = generateTrackMap( tracksList );
-		//LastFMDataParser parser = new LastFMDataParser(dataset_path);
-		//tracksList = LastFMDataParser.parseDataSet(false);
+		ALSRecommendationModel alsRec = new ALSRecommendationModel();
+		JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions = alsRec.runModel(ratings);
+		cassandraConnector.persistPredictions(sc, allusers, tracksList, predictions);
+		cassandraConnector.persistStatData(sc, startTime, alsRec.getPredictionsSize(), alsRec.getMSE());
+		*/
+		logger.info("Spark job Finished!");
+	}
+	
+
+	
+	public static void main(String[] args) {
 		
-		logger.info("## Fetched # "+ tracksMap.size() +" Tracks ##");
+		String spark_host= null;
+		String cassandra_host = null;
 		
-		/*
-		 * Fetch PlayLists From Cassandra  - aka Ratings
-		 */
+		if (args.length == 2) {
+			spark_host = args[0];
+			cassandra_host=args[1];
+		}
+		else if(args.length != 0){
+			System.err.println("Syntax: main.java.uk.ac.imperial.lsds.play2sdg.SparkCollaborativeFiltering <Spark Master URL> <Cassandra contact point>");
+			System.exit(1);
+		}
 		
-		allplaylists = dxController.getAllPlaylists();
-		allusers = dxController.getAllUsers();
-		usersMap = generateUserMap( allusers );
+		SparkConf conf;
+		if((spark_host==null) && (cassandra_host==null))
+			conf = createSparkConf("local[8]", "wombat11.doc.res.ic.ac.uk");
+		else
+			conf = createSparkConf(spark_host, cassandra_host);
+			
 		
-		logger.info("## Total Users Fetched # "+ usersMap.size() +" ##");
+		SparkCollaborativeFiltering cf = new SparkCollaborativeFiltering(conf);
+		cf.run();
+
+	}
+	
+	
+	private int trackID = 0;
+	private int userID = 0;
+	
+	private Map<String, Integer>  generateUserMap(){
+		Map<String , Integer> m = new HashMap<String , Integer>();
+		userID = 0;
+		for(User u : allusers){
+			m.put(u.getEmail(), userID);
+			userID++;
+		}
+		return m;		
+	}
+
+	private Map<String, Integer>  generateTrackMap(){
+		Map<String, Integer> m = new HashMap<String, Integer>(tracksList.size());
 		
+		for(trackID=0; trackID < tracksList.size(); trackID++){
+			String title = tracksList.get(trackID);
+			System.out.println("TrackTitle "+ title +"Track ID " +trackID);
+			m.put(title, trackID);
+		}
 		
-//		for(String u : usersMap.keySet())
-//			System.out.println("U: "+ u);
-		
-		
-		logger.info("## Total PlayLists Fetched # "+ allplaylists.size() +" ##");
-		
-//		for(PlayList p : allplaylists)
-//			System.out.println("P: "+ p);
-		
-		
-		
+		return m;
+	}
+
+	private JavaRDD<Rating> generateRatings(JavaSparkContext sc){
 		List<String> ratingList = new ArrayList<String>();
  		/*
 		 * Convert IDS and save to HDFS File
 		 */
+		System.out.println("PL SIze: " +allplaylists.size());
 		for(PlayList playList : allplaylists){
+			System.out.println("Pl Tracks Size " +playList.getTracks().size() );
+			System.out.println("Pl Tracks " +playList.getTracks().toString() );
 			for(String track : playList.getTracks()){
 				StringBuilder sb = new StringBuilder();
 				sb.append(usersMap.get(playList.getUsermail()) + ",");
@@ -136,196 +187,43 @@ public class SparkCollaborativeFiltering {
 			}
 		}
 		logger.info("## Converted ratings from: "+allplaylists.size() + " playlists##");
+		System.out.println("New Ratings List: "+ ratingList.size());
+		
+		for(String tmp : ratingList)
+			System.out.println("Rating "+ tmp);
 		
 		/*
-		 * Persist To FS
-		 */
-		RatingsFileWriter rw = new RatingsFileWriter(dataset_path);
-		//RatingsFileWriter rw = new RatingsFileWriter("hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset");
-		rw.persistRatingsFile(ratingList);
-		
-		// Load and parse the data
-		String path = dataset_path +"/ratings.data";
-		//String path = "hdfs://wombat30.doc.res.ic.ac.uk:8020/user/pg1712/lastfm_subset/ratings.data";
-		
+		 * Persist To HDFS
+		 * 
+			RatingsFileWriter rw = new RatingsFileWriter(dataset_path);
+			rw.persistRatingsFile(ratingList);
+			// Load and parse the data
+			String path = dataset_path +"/ratings.data";
 		logger.info("## Persisting to HDFS -> Done ##");
+		*/
 				
-		JavaRDD<String> data = sc.textFile(path);
+		JavaRDD<String> data = sc.parallelize(ratingList);
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
 			public Rating call(String s) {
 				String[] sarray = s.split(",");
 				return new Rating(Integer.parseInt(sarray[0]), Integer
 						.parseInt(sarray[1]), Double.parseDouble(sarray[2]));
 			}
-		});
+		}).cache();
 		
-		// Build the recommendation model using ALS
-		int rank = 10;
-		int numIterations = 20;
-		MatrixFactorizationModel model = ALS.train(JavaRDD.toRDD(ratings),
-				rank, numIterations, 0.01);
-
-		// Evaluate the model on rating data
-		JavaRDD<Tuple2<Object, Object>> userProducts = ratings
-				.map(new Function<Rating, Tuple2<Object, Object>>() {
-					public Tuple2<Object, Object> call(Rating r) {
-						return new Tuple2<Object, Object>(r.user(), r.product());
-					}
-				});
-
-		JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions = JavaPairRDD
-				.fromJavaRDD(model
-						.predict(JavaRDD.toRDD(userProducts))
-						.toJavaRDD()
-						.map(new Function<Rating, Tuple2<Tuple2<Integer, Integer>, Double>>() {
-							public Tuple2<Tuple2<Integer, Integer>, Double> call(
-									Rating r) {
-								return new Tuple2<Tuple2<Integer, Integer>, Double>(
-										new Tuple2<Integer, Integer>(r.user(),
-												r.product()), r.rating());
-							}
-						}));
-		JavaRDD<Tuple2<Double, Double>> ratesAndPreds = JavaPairRDD
-				.fromJavaRDD(
-						ratings.map(new Function<Rating, Tuple2<Tuple2<Integer, Integer>, Double>>() {
-							public Tuple2<Tuple2<Integer, Integer>, Double> call(
-									Rating r) {
-								return new Tuple2<Tuple2<Integer, Integer>, Double>(
-										new Tuple2<Integer, Integer>(r.user(),
-												r.product()), r.rating());
-							}
-						})).join(predictions).values();
-		
-		double MSE = JavaDoubleRDD.fromRDD(
-				ratesAndPreds.map(
-						new Function<Tuple2<Double, Double>, Object>() {
-							public Object call(Tuple2<Double, Double> pair) {
-								Double err = pair._1() - pair._2();
-								return err * err;
-							}
-						}).rdd()).mean();
-		
-		System.out.println("\n ## Rates and Predictions Size: "+ predictions.toArray().size());
-		System.out.println("\n ## Mean Squared Error = " + String.format("%2f", MSE));
-		
-		/*
-		 * Finally read results and Write to Cassandra Recommendations Table
-		 * Avoid Distributeed Spark way! -> Static data issue (allTracks and allUsers Lists)
-		 *
-		predictions.foreach(new VoidFunction<Tuple2<Tuple2<Integer, Integer>,Double>>(){
-			@Override
-			public void call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
-					throws Exception {
-				//System.out.println("Tupple: "+ v1.toString());	
-				logger.debug("Creating Recommendation-> user: "+v1._1()._1 + "\t track: " + v1._1()._2 + "\t score: "+v1._2() );
-				allusers = CassandraQueryController.listAllUsers();
-				Recommendation newRec = new Recommendation(allusers.get(v1._1()._1).getEmail());
-				tracksList = CassandraQueryController.listAllTracks();
-				newRec.getRecList().put(tracksList.get(v1._1()._2).getTitle(), v1._2());
-				CassandraQueryController.persist(newRec);
-			}
-		});*/
-		
-		
-		/**
-		 * Create recommendations based on stored Track and User id
-		 * Similar Implementation with -> MapPredictions2Tracks(predictions) method
-		 */
-		List<Recommendation> newUserSongRec = new ArrayList<Recommendation>();
-		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
-			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
-			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
-			newRec.getRecMap().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
-			newUserSongRec.add(newRec);
-			//CassandraQueryController.persist(newRec);
-		}
-
-		/**
-		 * Create an RDD from recommendations and Save it in parallel fashion
-		 */
-		JavaRDD<Recommendation> rdd = sc.parallelize(newUserSongRec);
-		rdd.persist(StorageLevel.MEMORY_AND_DISK_SER());
-		rdd.foreach(new VoidFunction<Recommendation>() {
-			@Override
-			public void call(Recommendation r) throws Exception {
-				dxController.persist(r);
-			}
-		});
-		
-		/*
-		 * Update Stats Table 
- 		 */
-		SystemStats perf  = new SystemStats();
-		StatsTimeseries sparkJobStats = new StatsTimeseries("sparkCF");
-		sparkJobStats.getMetricsMap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
-		sparkJobStats.getMetricsMap().put("Total Predictions", predictions.count()+"" );
-		sparkJobStats.getMetricsMap().put("Mean Squared Error",  MSE+"" );
-		
-		//-> Added Performance Data
-		sparkJobStats.collectData(perf);
-		dxController.persist(sparkJobStats);
-		
-		
-		clusterManager.disconnect();
-		System.out.println("Finished Writing new User-Song recommendations using cassandra Spark connector- Job took: "+Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+""));
-		/*
-		JavaRDD<Recommendation> recc = predictions.map(new Function<Tuple2<Tuple2<Integer, Integer>, Double>, Recommendation>() {
-
-			@Override
-			public Recommendation call(Tuple2<Tuple2<Integer, Integer>, Double> v1)
-					throws Exception {
-				System.out.println("Tupple: "+ v1.toString());
-				System.out.println("arg1: "+v1._1()._1 + "arg2" + v1._1()._2 + "arg3: "+v1._2() );
-				return null;
-			}
-
-			
-		});*/
-
-		// model.save("myModelPath");
-		// MatrixFactorizationModel sameModel =
-		// MatrixFactorizationModel.load("myModelPath");
+		return ratings;
 	}
-	
-	
-	private static int trackID = 0;
-	private static int userID = 0;
-	
-	
-	private static Map<String, Integer>  generateUserMap(List<User> allusers){
-		Map<String , Integer> m = new HashMap<String , Integer>();
-		userID = 0;
-		
-		for(User u : allusers){
-			m.put(u.getEmail(), userID);
-			userID++;
-		}
-		return m;		
-	}
-
-	private static Map<String, Integer>  generateTrackMap(List<Track> alltracks){
-		Map<String, Integer> m = new HashMap<String, Integer>();
-		trackID = 0;
-		
-		for(Track t : alltracks){
-			m.put(t.getTitle(), trackID);
-			trackID++;
-		}
-		return m;
-	}
-
 	
 	/**
 	 * Method Mapping generated Recommendations to Tracks and Users 
 	 * @param predictions
-	 */
-	
+	 * 
 	public static void MapPredictions2Tracks(JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions){
 		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
 			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
 			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
-			newRec.getRecMap().put(tracksList.get(pred._1()._2).getTitle(), pred._2());
+			newRec.getRecMap().put(tracksList.get(pred._1()._2), pred._2());
 			dxController.persist(newRec);
 		}
-	}
+	}*/
 }
