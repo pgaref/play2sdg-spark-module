@@ -1,5 +1,6 @@
 package main.java.uk.ac.imperial.lsds.dx_models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -11,7 +12,7 @@ import com.google.common.base.Objects;
 
 
 @Table(keyspace = "play_cassandra", name = "playlists")
-public class PlayList{
+public class PlayList implements Serializable{
 
 	@PartitionKey
 	@Column(name = "id")
@@ -27,14 +28,19 @@ public class PlayList{
 	public List<String> tracks;
 
 	public PlayList() {}
-
-	public PlayList(String usermail, String fname) {
-
+	
+	public PlayList(String usermail, String folder) {
 		this.id = UUID.randomUUID();
-		this.folder = fname;
+		this.folder = folder;
 		this.usermail = usermail;
 		this.tracks = new ArrayList<String>();
-
+	}
+	
+	public PlayList(UUID id, String usermail, String folder, List<String> tracks) {
+		this.id = id;
+		this.folder = folder;
+		this.usermail = usermail;
+		this.tracks = tracks;
 	}
 
 	public void addRatingSong(String track) {

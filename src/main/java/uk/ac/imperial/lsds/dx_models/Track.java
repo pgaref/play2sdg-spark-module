@@ -36,6 +36,11 @@ public class Track{
     
     public Track(){}
     
+    public Track(String id, String title){
+    	this.track_id = id;
+    	this.title = title;
+    }
+    
     public Track(String id, String title, String artist, String releaseDate){
     	
     	this.track_id = id;
@@ -43,6 +48,7 @@ public class Track{
     	this.artist = artist;
     	this.releaseDate = Track.convertDate(releaseDate);
     }
+    
     /**
      * Simple valid date converter
      * @param dateInString

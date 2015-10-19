@@ -1,6 +1,8 @@
 package main.java.uk.ac.imperial.lsds.dx_models;
 
 
+import java.io.Serializable;
+
 import com.datastax.driver.mapping.annotations.Column;
 import com.datastax.driver.mapping.annotations.PartitionKey;
 import com.datastax.driver.mapping.annotations.Table;
@@ -8,7 +10,7 @@ import com.google.common.base.Objects;
 
 
 @Table(keyspace="play_cassandra", name = "users")
-public class User{
+public class User implements Serializable{
 	
 	@PartitionKey
 	@Column(name = "key")
@@ -35,12 +37,12 @@ public class User{
 		this.password = password;
 	}
 
-	public User(String email, String username, String password, String fname, String lname) {
-		this.email = email;
+	public User(String key, String username, String password, String firstname, String lastname) {
+		this.email = key;
 		this.username = username;
 		this.password = password;
-		this.firstname = fname;
-		this.lastname = lname;
+		this.firstname = firstname;
+		this.lastname = lastname;
 	}
 
 	/**
