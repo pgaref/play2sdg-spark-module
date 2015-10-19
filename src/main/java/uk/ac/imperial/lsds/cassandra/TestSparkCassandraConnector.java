@@ -31,11 +31,11 @@ import com.google.common.base.Optional;
 
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
 
-public class SparkCassandraConnector implements Serializable {
+public class TestSparkCassandraConnector implements Serializable {
 	
 	    private transient SparkConf conf;
 	 
-	    private SparkCassandraConnector(SparkConf conf) {
+	    private TestSparkCassandraConnector(SparkConf conf) {
 	        this.conf = conf;
 	    }
 	 
@@ -270,7 +270,7 @@ public class SparkCassandraConnector implements Serializable {
 	        conf.setMaster("local");
 	        conf.set("spark.cassandra.connection.host", "wombat26.doc.res.ic.ac.uk");
 	 
-	        SparkCassandraConnector app = new SparkCassandraConnector(conf);
+	        TestSparkCassandraConnector app = new TestSparkCassandraConnector(conf);
 	        app.run();
 	    }
 	

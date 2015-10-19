@@ -34,9 +34,9 @@ import com.impetus.kundera.client.Client;
  *
  */
 
-public class CassandraQueryController {
+public class KunderaCassandraQueryController {
 	
-	static Logger  logger = Logger.getLogger(CassandraQueryController.class);
+	static Logger  logger = Logger.getLogger(KunderaCassandraQueryController.class);
 	static EntityManagerFactory emf;
 	
 	static Counter songCounter = new Counter("tracks");
@@ -179,7 +179,7 @@ public class CassandraQueryController {
 		logger.debug("\n ##############  Listing First Track page ############## \n ");
 		allTracks.addAll(result);
 		
-		while(allTracks.size() < CassandraQueryController.getCounterValue("tracks") ){
+		while(allTracks.size() < KunderaCassandraQueryController.getCounterValue("tracks") ){
 			em = getEntintyManagerCustom();
 			Query findQuery = em
 				.createNativeQuery("SELECT * FROM tracks WHERE token(key) > token('"+ allTracks.get(allTracks.size()-1).getTrack_id() +"') LIMIT 5000;", Track.class);
@@ -484,7 +484,7 @@ public class CassandraQueryController {
 	 */
 	
 	private static EntityManager getEntintyManagerCustom() {	
-		emf = CassandraQueryController.getEM();
+		emf = KunderaCassandraQueryController.getEM();
 		EntityManager em = emf.createEntityManager();
 		
 		return em;
@@ -504,8 +504,8 @@ public class CassandraQueryController {
 	}	
 	
 	public static void main(String[] args) {
-		System.out.println("Tacks Counter: "+ CassandraQueryController.getCounterValue("tracks"));
-		System.out.println("Looking for user pgaref : found =  "+ CassandraQueryController.findbyEmail("pgaref@example.com").toString());
+		System.out.println("Tacks Counter: "+ KunderaCassandraQueryController.getCounterValue("tracks"));
+		System.out.println("Looking for user pgaref : found =  "+ KunderaCassandraQueryController.findbyEmail("pgaref@example.com").toString());
 		
 	}
 }
