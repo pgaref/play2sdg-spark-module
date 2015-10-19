@@ -14,6 +14,7 @@ import main.java.uk.ac.imperial.lsds.dx_models.Track;
 import main.java.uk.ac.imperial.lsds.dx_models.User;
 import main.java.uk.ac.imperial.lsds.io_handlers.RatingsFileWriter;
 import main.java.uk.ac.imperial.lsds.utils.SystemStats;
+import main.java.uk.ac.imperial.lsds.utils.Utils;
 
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
@@ -58,13 +59,15 @@ public class SparkCollaborativeFiltering implements Serializable{
 //	private static ClusterManager clusterManager = new ClusterManager("play_cassandra", 1, "146.179.131.141");
 //	private static CassandraDxQueryController dxController = new CassandraDxQueryController(clusterManager.getSession());
 	
-	//No need to serialise
+	//No need to serialize
 	private transient SparkConf conf;
-	public SparkCollaborativeFiltering(SparkConf c) {this.conf = c;}
+	public SparkCollaborativeFiltering(SparkConf c){
+		this.conf = c;
+	}
 	
 	public static SparkConf createSparkConf(String master, String cassandra_host){
     	return new SparkConf()
-    	.setAppName("Spark Cassandra Connector DEMO")
+    	.setAppName("play2sdg Spark CF Job")
     	.setMaster(master)
     	.set("spark.cassandra.connection.host", cassandra_host)
     	//Not-Compatible in driver version 1.2
@@ -100,9 +103,6 @@ public class SparkCollaborativeFiltering implements Serializable{
 		usersMap = generateUserMap( );
 		logger.info("## Generated # "+ usersMap.size() +" User IDs ##");
 		
-		for(String tmp : usersMap.keySet())
-			System.out.println("UserMap K:"+tmp + " V: "+usersMap.get(tmp));
-		
 		
 		JavaRDD<Rating> ratings = generateRatings(sc);
 		logger.info("## Generated # "+ ratings.count() +" Ratings ##");
@@ -112,7 +112,7 @@ public class SparkCollaborativeFiltering implements Serializable{
 		cassandraConnector.persistPredictions(sc, allusers, tracksList, predictions);
 		cassandraConnector.persistStatData(sc, startTime, alsRec.getPredictionsSize(), alsRec.getMSE());
 		*/
-		logger.info("Spark job Finished!");
+		logger.info("Spark job Finished! Took  "+ (double)(System.currentTimeMillis()-startTime)/1000 + "seconds");
 	}
 	
 
@@ -162,7 +162,6 @@ public class SparkCollaborativeFiltering implements Serializable{
 		
 		for(trackID=0; trackID < tracksList.size(); trackID++){
 			String title = tracksList.get(trackID);
-			System.out.println("TrackTitle "+ title +"Track ID " +trackID);
 			m.put(title, trackID);
 		}
 		
@@ -172,12 +171,9 @@ public class SparkCollaborativeFiltering implements Serializable{
 	private JavaRDD<Rating> generateRatings(JavaSparkContext sc){
 		List<String> ratingList = new ArrayList<String>();
  		/*
-		 * Convert IDS and save to HDFS File
+		 * Convert IDS and Cache RDD
 		 */
-		System.out.println("PL SIze: " +allplaylists.size());
 		for(PlayList playList : allplaylists){
-			System.out.println("Pl Tracks Size " +playList.getTracks().size() );
-			System.out.println("Pl Tracks " +playList.getTracks().toString() );
 			for(String track : playList.getTracks()){
 				StringBuilder sb = new StringBuilder();
 				sb.append(usersMap.get(playList.getUsermail()) + ",");
@@ -187,10 +183,6 @@ public class SparkCollaborativeFiltering implements Serializable{
 			}
 		}
 		logger.info("## Converted ratings from: "+allplaylists.size() + " playlists##");
-		System.out.println("New Ratings List: "+ ratingList.size());
-		
-		for(String tmp : ratingList)
-			System.out.println("Rating "+ tmp);
 		
 		/*
 		 * Persist To HDFS
@@ -203,6 +195,7 @@ public class SparkCollaborativeFiltering implements Serializable{
 		*/
 				
 		JavaRDD<String> data = sc.parallelize(ratingList);
+		logger.info("## Persisting ratings data (RDD size) "+ (double)(Utils.sizeOf(data.toArray()).length/1024)/1024 +" MBytes (List size)" + (double)(Utils.sizeOf(allplaylists).length/1024)/1024 +" MBytes"); 
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
 			public Rating call(String s) {
 				String[] sarray = s.split(",");

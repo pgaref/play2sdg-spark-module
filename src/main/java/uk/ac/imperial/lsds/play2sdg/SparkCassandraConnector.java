@@ -17,6 +17,7 @@ import main.java.uk.ac.imperial.lsds.dx_models.StatsTimeseries;
 import main.java.uk.ac.imperial.lsds.dx_models.Track;
 import main.java.uk.ac.imperial.lsds.dx_models.User;
 import main.java.uk.ac.imperial.lsds.utils.SystemStats;
+import main.java.uk.ac.imperial.lsds.utils.Utils;
 
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
@@ -59,14 +60,14 @@ public class SparkCassandraConnector implements Serializable {
     	            }
     	        }).persist(StorageLevel.MEMORY_AND_DISK()	);
     	//System.out.println("Data Read as CassandraRows: \n" + StringUtils.join(cassandraRowsRDD.toArray(), "\n"));
-    	logger.info("Fetched Tracks Data size: "+ (double)(sizeOf(cassandraRowsRDD.toArray()).length/1024)/1024 +" MBytes " + cassandraRowsRDD.toArray().size() +" elements");
+    	logger.info("Fetched Tracks Data size: "+ (double)(Utils.sizeOf(cassandraRowsRDD.toArray()).length/1024)/1024 +" MBytes " + cassandraRowsRDD.toArray().size() +" elements");
     	return cassandraRowsRDD.toArray();
     }
     
     public List<PlayList> fetchAllPlayLists(JavaSparkContext sc){
     	CassandraJavaRDD<PlayList> rdd = javaFunctions(sc).cassandraTable("play_cassandra", "playlists", mapRowTo(PlayList.class))
     			.select( "id", "usermail", "folder", "tracks");
-    	logger.info("Fetched PlayLists Data size : "+ (double)(sizeOf(rdd.toArray()).length/1024)/1024 +" MBytes " + rdd.toArray().size() +" elements" );
+    	logger.info("Fetched PlayLists Data size : "+ (double)(Utils.sizeOf(rdd.toArray()).length/1024)/1024 +" MBytes " + rdd.toArray().size() +" elements" );
     	return rdd.toArray();
     }
     
@@ -79,7 +80,7 @@ public class SparkCassandraConnector implements Serializable {
     					column("firstname").as("fistname"),
     					column("lastname")
     					);
-    	logger.info("Fetched User Data size : "+ (double)(sizeOf(rdd.toArray()).length/1024)/1024 +" MBytes " + rdd.toArray().size() +" elements" );
+    	logger.info("Fetched User Data size : "+ (double)(Utils.sizeOf(rdd.toArray()).length/1024)/1024 +" MBytes " + rdd.toArray().size() +" elements" );
     	return rdd.toArray();
     }
     
@@ -139,21 +140,7 @@ public class SparkCassandraConnector implements Serializable {
 		
     }
     
-	private static byte[] sizeOf(Object obj) {
-		ByteArrayOutputStream byteObject = new ByteArrayOutputStream();
-		ObjectOutputStream objectOutputStream;
-		try {
-			objectOutputStream = new ObjectOutputStream(byteObject);
-			objectOutputStream.writeObject(obj);
-			objectOutputStream.flush();
-			objectOutputStream.close();
-			byteObject.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return byteObject.toByteArray();
-	}
+
     
     /*
      * For Testing only!
