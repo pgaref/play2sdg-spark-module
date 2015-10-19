@@ -3,7 +3,7 @@ package test.java.uk.ac.imperial.lsds.play2sdg;
 import java.util.Date;
 import java.util.List;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.cassandra.KunderaCassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.PlayList;
 import main.java.uk.ac.imperial.lsds.models.Recommendation;
 import main.java.uk.ac.imperial.lsds.models.Stats;
@@ -18,7 +18,7 @@ public class TestCassandraQueries {
 	
 	
 	public static void TestListUsers(){
-		List<User> list = CassandraQueryController.listAllUsers();
+		List<User> list = KunderaCassandraQueryController.listAllUsers();
 		assert(list != null);
 		assert(list.size() != 0);
 		assert(list.get(0) != null);	
@@ -26,7 +26,7 @@ public class TestCassandraQueries {
 	}
 	
 	public static void TestListSongs(){
-		List<Track> list = CassandraQueryController.listAllTracksWithPagination();
+		List<Track> list = KunderaCassandraQueryController.listAllTracksWithPagination();
 		assert(list != null);
 		assert(list.size() != 0);
 		assert(list.get(0) != null);
@@ -34,29 +34,29 @@ public class TestCassandraQueries {
 	}
 	
 	public static void testListRecommendations(){
-		List<Recommendation> list = CassandraQueryController.listAllRecommendations();
+		List<Recommendation> list = KunderaCassandraQueryController.listAllRecommendations();
 		assert(list != null);
 		assert(list.size() != 0);
 		assert(list.get(0) != null);
 		System.out.println("Got -> "+ list.size() + " Recommendation");
 		//Check init data corectness
-		assert( CassandraQueryController.getUserRecc("pgaref@example.com") != null );
+		assert( KunderaCassandraQueryController.getUserRecc("pgaref@example.com") != null );
 	}
 	
 	public static void testAddRec(){
 		Recommendation r = new Recommendation("pgaref@example.com");
 		r.addRecommendation("DasdsadsaXXX", 5.0);
 		r.addRecommendation("anotherOne", 4.0);
-		CassandraQueryController.persist(r);
+		KunderaCassandraQueryController.persist(r);
 	}
 	
 	public static void TestAddUserPlayList(){
 		PlayList p = new PlayList("pgaref@example.com", "whatever");
-		p.addRatingSong(CassandraQueryController.listAllTracks().get(0));
-		CassandraQueryController.persist(p);
+		p.addRatingSong(KunderaCassandraQueryController.listAllTracks().get(0));
+		KunderaCassandraQueryController.persist(p);
 		
-		p.addRatingSong(CassandraQueryController.listAllTracks().get(1));
-		CassandraQueryController.persist(p);
+		p.addRatingSong(KunderaCassandraQueryController.listAllTracks().get(1));
+		KunderaCassandraQueryController.persist(p);
 		
 	}
 	
@@ -67,12 +67,12 @@ public class TestCassandraQueries {
 		s.getStatsMap().put("memory", (double)2000);
 		s.getStatsMap().put("errors", (double) 0);
 		s.setTimestamp(new Date());
-		CassandraQueryController.persist(s);
+		KunderaCassandraQueryController.persist(s);
 		
-		assert(CassandraQueryController.getAllStats() == null);
-		assert(CassandraQueryController.getAllStats().size() < 1 );
+		assert(KunderaCassandraQueryController.getAllStats() == null);
+		assert(KunderaCassandraQueryController.getAllStats().size() < 1 );
 		
-		for(Stats tmp : CassandraQueryController.getAllStats()){
+		for(Stats tmp : KunderaCassandraQueryController.getAllStats()){
 			System.out.println("Got statistic: "+ tmp.getId() );
 			System.out.println("With Timestamp: "+ tmp.getTimestamp());
 			System.out.println("with Values: "+ tmp.getStatsMap());
@@ -101,17 +101,17 @@ public class TestCassandraQueries {
 		ts.getStatsMap().put("mem-total", perf.getMemTotal()+"");
 		ts.getStatsMap().put("mem-avail", perf.getMemAvailable()+"");
 		
-		CassandraQueryController.persist(ts);
+		KunderaCassandraQueryController.persist(ts);
 		
-		List<StatsTimeseries> l = CassandraQueryController.getAllStatsTimeseries("Spark-statseries");
+		List<StatsTimeseries> l = KunderaCassandraQueryController.getAllStatsTimeseries("Spark-statseries");
 		for(StatsTimeseries t : l ){
 			System.out.println("Read StatTs "+ t);
 		}
 	}
 	
 	public static void testDeletePlayList(){
-		List<PlayList> found  =  (List<PlayList>) CassandraQueryController.getUserPlayLists("pgaref@example.com");
-		boolean result = CassandraQueryController.deleteUserPlayListSong(found.get(0).getId(), "Yunu Yucu Ninu");
+		List<PlayList> found  =  (List<PlayList>) KunderaCassandraQueryController.getUserPlayLists("pgaref@example.com");
+		boolean result = KunderaCassandraQueryController.deleteUserPlayListSong(found.get(0).getId(), "Yunu Yucu Ninu");
 		System.out.println("Delete query result: "+ result);
 	}
 	
