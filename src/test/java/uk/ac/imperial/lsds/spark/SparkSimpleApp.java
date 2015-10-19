@@ -1,4 +1,4 @@
-package main.java.uk.ac.imperial.lsds.play2sdg;
+package test.java.uk.ac.imperial.lsds.spark;
 
 /* SimpleApp.java */
 import java.util.Arrays;
