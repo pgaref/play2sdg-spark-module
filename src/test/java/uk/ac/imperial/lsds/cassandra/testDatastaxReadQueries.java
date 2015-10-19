@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.cassandra.KunderaCassandraQueryController;
 import main.java.uk.ac.imperial.lsds.dx_controller.CassandraDxQueryController;
 import main.java.uk.ac.imperial.lsds.dx_controller.ClusterManager;
 import main.java.uk.ac.imperial.lsds.dx_models.User;

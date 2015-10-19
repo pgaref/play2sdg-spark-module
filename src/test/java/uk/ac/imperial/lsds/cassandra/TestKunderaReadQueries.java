@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import main.java.uk.ac.imperial.lsds.cassandra.CassandraQueryController;
+import main.java.uk.ac.imperial.lsds.cassandra.KunderaCassandraQueryController;
 import main.java.uk.ac.imperial.lsds.models.Track;
 import main.java.uk.ac.imperial.lsds.models.User;
 
@@ -12,7 +12,7 @@ public class TestKunderaReadQueries {
 
 	private static Long testGetAllTracks() {
 		long start = System.currentTimeMillis();
-		List<Track> all = CassandraQueryController.listAllTracks();
+		List<Track> all = KunderaCassandraQueryController.listAllTracks();
 		long end = System.currentTimeMillis();
 		System.out.println("Get all tracks: " + all.size() + "# took: "
 				+ (end - start));
@@ -22,7 +22,7 @@ public class TestKunderaReadQueries {
 
 	private static Long testGetAllUsers() {
 		long start = System.currentTimeMillis();
-		List<User> all = CassandraQueryController.listAllUsers();
+		List<User> all = KunderaCassandraQueryController.listAllUsers();
 		long end = System.currentTimeMillis();
 		System.out.println("Get all tracks: " + all.size() + "# took: "
 				+ (end - start));
@@ -32,7 +32,7 @@ public class TestKunderaReadQueries {
 	
 	private static Long testGetOneUser(){
 		long start = System.currentTimeMillis();
-		User got = CassandraQueryController.findbyEmail("pgaref@example.com");
+		User got = KunderaCassandraQueryController.findbyEmail("pgaref@example.com");
 		long end = System.currentTimeMillis();
 		System.out.println("Get user: " + got + "# took: "
 				+ (end - start));
