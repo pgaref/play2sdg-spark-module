@@ -1,5 +1,6 @@
 package main.java.uk.ac.imperial.lsds.dx_models;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +14,7 @@ import main.java.uk.ac.imperial.lsds.utils.SystemStats;
 
 
 @Table(keyspace="play_cassandra", name = "statseries")
-public class StatsTimeseries {
+public class StatsTimeseries implements Serializable{
 	
 	//partition key
 	@PartitionKey
@@ -24,7 +25,7 @@ public class StatsTimeseries {
     @Column(name = "timestamp")
 	private java.util.Date timestamp;
 	
-	@Column(name = "metrics-map")
+	@Column(name = "metricsMap")
 	private Map<String, String> metricsMap;
 	
 	public StatsTimeseries(){}

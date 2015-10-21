@@ -21,13 +21,18 @@ public class Recommendation implements Serializable{
 	@Column(name = "email")
 	public String email;
 	
-	@Column(name = "rec-map")
+	@Column(name = "recMap")
 	public Map<String, Double> recMap;
 	
 	
 	public Recommendation() {}
 	
 	public  Recommendation(String usermail){
+		this.email = usermail;
+		this.recMap = new HashMap<String, Double>();
+	}
+	
+	public  Recommendation(String usermail, HashMap<String, Double> recMap){
 		this.email = usermail;
 		this.recMap = new HashMap<String, Double>();
 	}
