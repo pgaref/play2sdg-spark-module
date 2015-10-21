@@ -115,10 +115,10 @@ public class ClusterManager {
 		logger.setLevel(Level.INFO);
 		//ClusterManager pg = new ClusterManager("play_cassandra", 1, "146.179.131.141");
 		ClusterManager pg = new ClusterManager("play_cassandra", 1, "155.198.198.12");
-		pg.dropSchema();
+		//pg.dropSchema();
 		pg.createSchema();
 		
-		pg.loadData("data/users.txt", "data/LastFM/lastfm_train");
+		//pg.loadData("data/users.txt", "data/LastFM/lastfm_train");
 		//pg.loadData("data/users.txt", "data/LastFM/lastfm_subset");
 		
 		Mapper<User> mapper = new MappingManager(pg.getSession()).mapper(User.class);

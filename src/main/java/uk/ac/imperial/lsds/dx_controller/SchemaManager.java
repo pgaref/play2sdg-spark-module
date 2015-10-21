@@ -73,7 +73,7 @@ public class SchemaManager {
 	public void createRecommendationsTable(){
 		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".recommendations ("+
 					"email text PRIMARY KEY,"+
-					"\"rec-map\" map<text, double>"+
+					"\"recMap\" map<text, double>"+
 				");");
 	}
 	
@@ -81,7 +81,7 @@ public class SchemaManager {
 		session.execute("CREATE TABLE IF NOT EXISTS "+SchemaManager.keyspace+".statseries (" +
 				    "id text," +
 				    "timestamp timestamp," +
-				    "\"metrics-map\" map<text, text>," +
+				    "\"metricsMap\" map<text, text>," +
 				    "PRIMARY KEY (id, timestamp)" +
 				");");
 	}
