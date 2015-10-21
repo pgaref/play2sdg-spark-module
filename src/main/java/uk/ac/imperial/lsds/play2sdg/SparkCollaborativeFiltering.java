@@ -106,12 +106,15 @@ public class SparkCollaborativeFiltering implements Serializable{
 		
 		JavaRDD<Rating> ratings = generateRatings(sc);
 		logger.info("## Generated # "+ ratings.count() +" Ratings ##");
-		/*
+		
+		// Run the acrtual Recommendation model!!
 		ALSRecommendationModel alsRec = new ALSRecommendationModel();
 		JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions = alsRec.runModel(ratings);
+		
+		//persist Predictions and Statistics
 		cassandraConnector.persistPredictions(sc, allusers, tracksList, predictions);
 		cassandraConnector.persistStatData(sc, startTime, alsRec.getPredictionsSize(), alsRec.getMSE());
-		*/
+		
 		logger.info("Spark job Finished! Took  "+ (double)(System.currentTimeMillis()-startTime)/1000 + "seconds");
 	}
 	
@@ -133,7 +136,7 @@ public class SparkCollaborativeFiltering implements Serializable{
 		
 		SparkConf conf;
 		if((spark_host==null) && (cassandra_host==null))
-			conf = createSparkConf("local[8]", "wombat11.doc.res.ic.ac.uk");
+			conf = createSparkConf("local[8]", "155.198.198.12");
 		else
 			conf = createSparkConf(spark_host, cassandra_host);
 			
@@ -195,7 +198,7 @@ public class SparkCollaborativeFiltering implements Serializable{
 		*/
 				
 		JavaRDD<String> data = sc.parallelize(ratingList);
-		logger.info("## Persisting ratings data (RDD size) "+ (double)(Utils.sizeOf(data.toArray()).length/1024)/1024 +" MBytes (List size)" + (double)(Utils.sizeOf(allplaylists).length/1024)/1024 +" MBytes"); 
+		logger.info("## Parallelizing ratings data RDD (size) "+ (double)(Utils.sizeOf(data.toArray()).length/1024)/1024 +" MBytes (List size)" + (double)(Utils.sizeOf(allplaylists).length/1024)/1024 +" MBytes"); 
 		JavaRDD<Rating> ratings = data.map(new Function<String, Rating>() {
 			public Rating call(String s) {
 				String[] sarray = s.split(",");

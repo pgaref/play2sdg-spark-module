@@ -106,7 +106,7 @@ public class SparkCassandraConnector implements Serializable {
 		rdd.persist(StorageLevel.MEMORY_AND_DISK_SER());
 		
 		CassandraJavaUtil.javaFunctions(rdd)
-        	.writerBuilder("play_cassandra", "recommendations ", mapToRow(Recommendation.class)).saveToCassandra();
+        	.writerBuilder("play_cassandra", "recommendations", mapToRow(Recommendation.class)).saveToCassandra();
 //		rdd.foreach(new VoidFunction<Recommendation>() {
 //			@Override
 //			public void call(Recommendation r) throws Exception {
@@ -134,7 +134,7 @@ public class SparkCassandraConnector implements Serializable {
 		
 		JavaRDD<StatsTimeseries> rdd = sc.parallelize(allStats);
 		CassandraJavaUtil.javaFunctions(rdd)
-    		.writerBuilder("play_cassandra", "statseries ", mapToRow(StatsTimeseries.class)).saveToCassandra();
+    		.writerBuilder("play_cassandra", "statseries", mapToRow(StatsTimeseries.class)).saveToCassandra();
 		
 		logger.info("Finished Writing new User-Song Predictions - Cassandra-Spark Connector - Job took: "+Double.parseDouble( ((System.currentTimeMillis()-jobStarted)/1000)+""));
 		
@@ -145,6 +145,7 @@ public class SparkCassandraConnector implements Serializable {
     /*
      * For Testing only!
      */
+    /*
     public static void main(String[] args) {
       SparkConf conf = SparkCollaborativeFiltering.createSparkConf("local[8]", "wombat11.doc.res.ic.ac.uk");
       
@@ -157,7 +158,7 @@ public class SparkCassandraConnector implements Serializable {
       //app.fetchAllUsers(sc);
       
       System.out.println("Job took "+ ((double) (System.currentTimeMillis()-start)/1000) + " seconds");
-  }
+  }*/
 
 
 }
