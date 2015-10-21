@@ -25,15 +25,15 @@ public class StatsTimeseries implements Serializable{
     @Column(name = "timestamp")
 	private java.util.Date timestamp;
 	
-	@Column(name = "metricsMap")
-	private Map<String, String> metricsMap;
+	@Column(name = "metricsmap")
+	private Map<String, String> metricsmap;
 	
 	public StatsTimeseries(){}
 	
 	public StatsTimeseries(String id){
 		this.id = id;
 		this.timestamp = new Date();
-		this.metricsMap = new HashMap<String, String>();
+		this.metricsmap = new HashMap<String, String>();
 	}
 	
 	/**
@@ -65,48 +65,46 @@ public class StatsTimeseries implements Serializable{
 	}
 
 	/**
-	 * @return the metricsMap
+	 * @return the metricsmap
 	 */
-	public Map<String, String> getMetricsMap() {
-		return metricsMap;
+	public Map<String, String> getMetricsmap() {
+		return metricsmap;
 	}
 
 	/**
-	 * @param metricsMap the metricsMap to set
+	 * @param metricsmap the metricsmap to set
 	 */
-	public void setMetricsMap(Map<String, String> metricsMap) {
-		this.metricsMap = metricsMap;
+	public void setMetricsmap(Map<String, String> metricsmap) {
+		this.metricsmap = metricsmap;
 	}
 
 
 	public void collectData(SystemStats perf){
-		this.getMetricsMap().put("os-name", perf.getOsName());
-		this.getMetricsMap().put("cpu-vendor", perf.getCpuVendor());
-		this.getMetricsMap().put("cpu-freq", perf.getCpuFreq()+"");
-		this.getMetricsMap().put("cores-num", perf.getCpuCores()+"");
-		this.getMetricsMap().put("system-load", perf.getSystemLoad()+"");
-		this.getMetricsMap().put("system-loadavg", perf.getSystemLoadAverage() +"");
+		this.getMetricsmap().put("os-name", perf.getOsName());
+		this.getMetricsmap().put("cpu-vendor", perf.getCpuVendor());
+		this.getMetricsmap().put("cpu-freq", perf.getCpuFreq()+"");
+		this.getMetricsmap().put("cores-num", perf.getCpuCores()+"");
+		this.getMetricsmap().put("system-load", perf.getSystemLoad()+"");
+		this.getMetricsmap().put("system-loadavg", perf.getSystemLoadAverage() +"");
 		
 		int num = 0;
 		for(Double val: perf.getCoresLoad()){
-			this.getMetricsMap().put("core-"+num, val+"");
+			this.getMetricsmap().put("core-"+num, val+"");
 			num++;
 		}
 		
-		this.getMetricsMap().put("mem-total", perf.getMemTotal()+"");
-		this.getMetricsMap().put("mem-avail", perf.getMemAvailable()+"");
+		this.getMetricsmap().put("mem-total", perf.getMemTotal()+"");
+		this.getMetricsmap().put("mem-avail", perf.getMemAvailable()+"");
 	}
 	
 	public String toString(){
 		StringBuffer toret = new StringBuffer();
-		for(String k :this.getMetricsMap().keySet() )
-			toret.append( "K: "+ k + " V: "+ this.getMetricsMap().get(k) );
+		for(String k :this.getMetricsmap().keySet() )
+			toret.append( "K: "+ k + " V: "+ this.getMetricsmap().get(k) );
 		
 		return "D: "+ this.getTimestamp() +
 				"ID: "+ this.getId() +
 				"["+toret.toString()+"]";
 	}
-
-
-
+	
 }

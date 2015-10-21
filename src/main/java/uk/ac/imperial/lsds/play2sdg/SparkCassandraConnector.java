@@ -94,7 +94,7 @@ public class SparkCassandraConnector implements Serializable {
 		for( Tuple2 <Tuple2<Integer, Integer>,Double> pred: predictions.toArray() ){
 			logger.debug("Creating Recommendation-> user: "+pred._1()._1 + "\t track: " + pred._1()._2 + "\t score: "+pred._2() );
 			Recommendation newRec = new Recommendation(allusers.get(pred._1()._1).getEmail());
-			newRec.getRecMap().put(tracksList.get(pred._1()._2), pred._2());
+			newRec.getRecmap().put(tracksList.get(pred._1()._2), pred._2());
 			newUserSongRec.add(newRec);
 			//CassandraQueryController.persist(newRec);
 		}
@@ -121,10 +121,10 @@ public class SparkCassandraConnector implements Serializable {
 		 * Update Stats Table 
  		 */
 		SystemStats perf  = new SystemStats();
-		StatsTimeseries sparkJobStats = new StatsTimeseries("sparkCF");
-		sparkJobStats.getMetricsMap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
-		sparkJobStats.getMetricsMap().put("Total Predictions", predictionCount+"" );
-		sparkJobStats.getMetricsMap().put("Mean Squared Error",  MSE+"" );
+		StatsTimeseries sparkJobStats = new StatsTimeseries("sdgCF");
+		sparkJobStats.getMetricsmap().put("Job time(s)", ((System.currentTimeMillis()-jobStarted)/1000)+"" ); 
+		sparkJobStats.getMetricsmap().put("Total Predictions", predictionCount+"" );
+		sparkJobStats.getMetricsmap().put("Mean Squared Error",  MSE+"" );
 		
 		//-> Added Performance Data
 		sparkJobStats.collectData(perf);

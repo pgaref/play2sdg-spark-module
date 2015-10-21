@@ -288,13 +288,13 @@ public class CassandraDxQueryController {
 		System.out.println("pangaref Recs: "+ dx.getUserRecommendations("pangaref@example.com").toString());
 */
 		StatsTimeseries ts = new StatsTimeseries("pgSeriesTest");
-		ts.getMetricsMap().put("cpu-util", "90%");
-		ts.getMetricsMap().put("ram", "50%");
+		ts.getMetricsmap().put("cpu-util", "90%");
+		ts.getMetricsmap().put("ram", "50%");
 		dx.persist(ts);
 		
 		ts = new StatsTimeseries("pgSeriesTest");
-		ts.getMetricsMap().put("cpu-util", "90%");
-		ts.getMetricsMap().put("ram", "50%");
+		ts.getMetricsmap().put("cpu-util", "90%");
+		ts.getMetricsmap().put("ram", "50%");
 		dx.persist(ts);
 				
 		cm.disconnect();
