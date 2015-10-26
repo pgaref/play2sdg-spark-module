@@ -130,6 +130,11 @@ public class CassandraDxQueryController {
 		return taccessor.getTacksPage(tracksNum).all();
 	}
 	
+	public List<Track> getNextTracksPage(String id, int tracksNum){
+		TrackAccessorI taccessor = manager.createAccessor(TrackAccessorI.class);
+		return taccessor.getNextTracksPage(id, tracksNum).all();
+	}
+	
 	/**
 	 * GENERIC counter - Cassandra JPA
 	 * 

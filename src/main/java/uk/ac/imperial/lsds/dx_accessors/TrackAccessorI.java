@@ -7,6 +7,7 @@
 package main.java.uk.ac.imperial.lsds.dx_accessors;
 
 import main.java.uk.ac.imperial.lsds.dx_models.Track;
+
 import com.datastax.driver.mapping.Result;
 import com.datastax.driver.mapping.annotations.Accessor;
 import com.datastax.driver.mapping.annotations.Param;
@@ -21,6 +22,9 @@ public interface TrackAccessorI {
 	 */
 	@Query("SELECT * FROM play_cassandra.tracks WHERE title = :title")
 	public Result<Track> getbyTitle(@Param("title") String title);
+	
+	@Query("SELECT * FROM play_cassandra.tracks WHERE token(key) > token(:key)LIMIT :num")
+	public Result<Track> getNextTracksPage(@Param("key") String id, @Param("num") int num);
 	
 	@Query("SELECT * FROM play_cassandra.tracks LIMIT :num")
 	public Result<Track> getTacksPage(@Param("num") int num);
