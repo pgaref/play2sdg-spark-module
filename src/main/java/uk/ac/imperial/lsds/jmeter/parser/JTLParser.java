@@ -65,7 +65,7 @@ public class JTLParser implements Runnable{
 			br = new BufferedReader(new FileReader(this.filePath));
 			
 			while( (line = br.readLine()) != null) {
-				
+				int responseCode =0;
 				// use comma as separator
 				String[] CsvFields = line.split(cvsSplitBy);
 				
@@ -75,7 +75,9 @@ public class JTLParser implements Runnable{
 				
 						
 				long timestamp = Long.parseLong(CsvFields[0]);
-				int responseCode = Integer.parseInt(CsvFields[3]);
+				try{
+						responseCode = Integer.parseInt(CsvFields[3]);
+				} catch (NumberFormatException ex){}
 				boolean success = Boolean.getBoolean(CsvFields[7]);
 				long bytes = Long.parseLong(CsvFields[8]);
 				long activeThreads = Long.parseLong(CsvFields[10]);
