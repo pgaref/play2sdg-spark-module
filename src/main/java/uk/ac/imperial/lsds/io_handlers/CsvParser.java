@@ -8,11 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class CvsParser {
+public class CsvParser {
 
 	public static void main(String[] args) {
 
-		CvsParser obj = new CvsParser();
+		CsvParser obj = new CsvParser();
 		obj.run();
 
 	}

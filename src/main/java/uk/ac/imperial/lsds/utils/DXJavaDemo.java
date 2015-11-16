@@ -24,10 +24,10 @@ import java.util.*;
 
 import static com.datastax.spark.connector.japi.CassandraJavaUtil.*;
  
-public class JavaDemo implements Serializable {
+public class DXJavaDemo implements Serializable {
     private transient SparkConf conf;
  
-    private JavaDemo(SparkConf conf) {
+    private DXJavaDemo(SparkConf conf) {
         this.conf = conf;
     }
  
@@ -258,7 +258,7 @@ public class JavaDemo implements Serializable {
         conf.setMaster("local");
         conf.set("spark.cassandra.connection.host", "localhost");
  
-        JavaDemo app = new JavaDemo(conf);
+        DXJavaDemo app = new DXJavaDemo(conf);
         app.run();
     }
  
