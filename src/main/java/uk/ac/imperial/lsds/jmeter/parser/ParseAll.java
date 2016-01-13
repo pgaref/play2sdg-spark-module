@@ -46,17 +46,16 @@ public class ParseAll {
 	public static void main(String [] args) throws Exception{
 		//Argument should be the path: /Users/pgaref/Documents/workspace/play2sdg-Spark-module/data/2015-11-14-13-48-48/
 		// add jmeter_results for the jmeter path
+		String path = "/home/pg1712/workspace/play2sdg-Spark-module/2015-11-27-16-43-45/";
 		int count =1;
 		int [] clientsNum = {5, 10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500 };
 		
-		String path = "/Users/pgaref/Documents/workspace/play2sdg-Spark-module/data/2015-11-14-13-48-48/";
 		System.out.println("# Parser Path :"+ path);
 		System.out.println("# Loadsphia project: ");
 		System.out.println("# \t clients \t avg(ms)	99th \t TPS \t 90th \t 75th \t cpu-util(%) \t mem-util(%) \t netIn-Mbps \t netOut-Mbps");
 		
 		for(int clients: clientsNum){
 			System.out.print(count + "\t"+ clients +"\t\t");
-			
 			final String clientString = clients+"";
 			File jmeterdir = new File(path+"jmeter_results");
 			File[] jmeterFiles = jmeterdir.listFiles(new FilenameFilter() {
